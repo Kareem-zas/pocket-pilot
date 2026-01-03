@@ -5,5 +5,6 @@ class GlobalColors {
   static const Color textColor = Color.fromARGB(255, 54, 54, 54);
   static const Color textColor2 = Color.fromARGB(255, 255, 255, 255);
   static const Color textFieldColor = Color.fromARGB(255, 39, 39, 39);
-  static const Color buttonColor = Color(0xFFA259FF);
+  static const Color buttonColor = Color.fromARGB(255, 89, 136, 255);
+  static const Color expensesColor = Colors.red;
 }

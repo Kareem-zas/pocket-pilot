@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pockect_pilot/utils/global_colors.dart';
 import 'package:pockect_pilot/widgets/app_widgets.dart';
+import 'package:pockect_pilot/view/home_page.dart';
 
 class MoneyInfoView extends StatefulWidget {
   const MoneyInfoView({super.key});
@@ -46,9 +47,7 @@ class _MoneyInfoViewState extends State<MoneyInfoView> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-
                 const SizedBox(height: 6),
-
                 Text(
                   'Please fill the form in your income info',
                   style: TextStyle(
@@ -57,9 +56,7 @@ class _MoneyInfoViewState extends State<MoneyInfoView> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-
                 const SizedBox(height: 30),
-
                 AppTextField(
                   controller: incomeController,
                   hint: "Income (optional)",
@@ -77,9 +74,7 @@ class _MoneyInfoViewState extends State<MoneyInfoView> {
                   ),
                   onChanged: (_) => setState(() {}),
                 ),
-
                 const SizedBox(height: 12),
-
                 Opacity(
                   opacity: _isIncomeEntered ? 1.0 : 0.4,
                   child: AppTextField(
@@ -88,9 +83,7 @@ class _MoneyInfoViewState extends State<MoneyInfoView> {
                     enabled: _isIncomeEntered,
                   ),
                 ),
-
                 const SizedBox(height: 12),
-
                 AppTextField(
                   controller: balanceController,
                   hint: "Current Balance",
@@ -107,17 +100,30 @@ class _MoneyInfoViewState extends State<MoneyInfoView> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 30),
+AppButton(
+  text: "Save",
+  onPressed: () {
+    final balance =
+        double.tryParse(balanceController.text.trim()) ?? 0;
 
-                AppButton(
-                  text: "Save",
-                  onPressed: () {
-                    print("Income: ${incomeController.text}");
-                    print("Category: ${incomeCategoryController.text}");
-                    print("Balance: ${balanceController.text}");
-                  },
-                ),
+    Navigator.pushReplacement(
+      context,
+      PageRouteBuilder(
+        transitionDuration: const Duration(milliseconds: 300),
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            HomePage(currentBalance: balance),
+        transitionsBuilder:
+            (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: animation,
+            child: child,
+          );
+        },
+      ),
+    );
+  },
+),
 
                 const SizedBox(height: 20),
               ],
