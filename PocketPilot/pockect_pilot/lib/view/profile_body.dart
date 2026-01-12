@@ -13,7 +13,7 @@ class _ProfileBodyState extends State<ProfileBody> {
   Widget build(BuildContext context) {
     return Center(
       child: Text(
-        'Profile',
+        'Comming Soon ...',
         style: TextStyle(
           color: GlobalColors.textColor2,
           fontSize: 13,
