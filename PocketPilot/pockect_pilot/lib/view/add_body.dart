@@ -1,6 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:pockect_pilot/utils/global_colors.dart';
 import 'package:pockect_pilot/widgets/app_widgets.dart';
+import 'package:pockect_pilot/services/receipt_ocr_service.dart';
 
 class AddBody extends StatefulWidget {
   static String? ocrTextCache;
@@ -40,6 +43,32 @@ class _AddBodyState extends State<AddBody> {
           );
         }
       });
+    }
+  }
+
+  Future<void> _scanReceiptFromCamera() async {
+    final picker = ImagePicker();
+    final XFile? image = await picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 85,
+    );
+
+    if (image == null) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Scanning receipt...')),
+    );
+
+    final text = await ReceiptOCRService.extractText(
+      File(image.path),
+    );
+
+    _fillFromOCR(text);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Receipt scanned successfully')),
+      );
     }
   }
 
@@ -118,14 +147,29 @@ class _AddBodyState extends State<AddBody> {
       child: Center(
         child: Column(
           children: [
-            Text(
-              'Add Expense',
-              style: TextStyle(
-                color: GlobalColors.textColor2,
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+Row(
+  children: [
+    const SizedBox(width: 85),
+    Text(
+      'Add Expense',
+      style: TextStyle(
+        color: GlobalColors.textColor2,
+        fontSize: 13,
+        fontWeight: FontWeight.bold,
+      ),
+    ),
+    const Spacer(),
+    IconButton(
+      icon: Icon(
+        Icons.camera_alt,
+        color: GlobalColors.textColor2,
+        size: 18,
+      ),
+      onPressed: _scanReceiptFromCamera,
+    ),
+  ],
+),
+
             const SizedBox(height: 30),
 
             AppTextField(
