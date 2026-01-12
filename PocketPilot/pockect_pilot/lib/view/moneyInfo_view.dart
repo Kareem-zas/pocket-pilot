@@ -31,7 +31,7 @@ class _MoneyInfoViewState extends State<MoneyInfoView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: GlobalColors.mainColor,
+      backgroundColor: GlobalColors.mainColor2,
       body: SingleChildScrollView(
         child: SafeArea(
           child: Container(
@@ -42,7 +42,7 @@ class _MoneyInfoViewState extends State<MoneyInfoView> {
                 Text(
                   'Income Info',
                   style: TextStyle(
-                    color: GlobalColors.textColor2,
+                    color: GlobalColors.textColor3,
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
                   ),
@@ -51,7 +51,7 @@ class _MoneyInfoViewState extends State<MoneyInfoView> {
                 Text(
                   'Please fill the form in your income info',
                   style: TextStyle(
-                    color: GlobalColors.textColor,
+                    color: GlobalColors.buttonColor,
                     fontSize: 7,
                     fontWeight: FontWeight.bold,
                   ),

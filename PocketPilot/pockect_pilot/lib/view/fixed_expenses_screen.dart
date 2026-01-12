@@ -12,17 +12,17 @@ class _FixedExpensesScreenState extends State<FixedExpensesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: GlobalColors.mainColor,
+      backgroundColor: GlobalColors.mainColor2,
       appBar: AppBar(
-        backgroundColor: GlobalColors.mainColor,
+        backgroundColor: GlobalColors.mainColor2,
         elevation: 0,
         iconTheme: IconThemeData(
-          color: GlobalColors.textColor2,
+          color: GlobalColors.textColor3,
         ),
         title: Text(
           'Fixed Expenses',
           style: TextStyle(
-            color: GlobalColors.textColor2,
+            color: GlobalColors.textColor3,
             fontSize: 13,
             fontWeight: FontWeight.bold,
           ),

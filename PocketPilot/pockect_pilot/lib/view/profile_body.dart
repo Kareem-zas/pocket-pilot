@@ -15,7 +15,7 @@ class _ProfileBodyState extends State<ProfileBody> {
       child: Text(
         'Comming Soon ...',
         style: TextStyle(
-          color: GlobalColors.textColor2,
+          color: GlobalColors.textColor3,
           fontSize: 13,
           fontWeight: FontWeight.bold,
         ),

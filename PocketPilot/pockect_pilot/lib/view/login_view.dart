@@ -17,6 +17,7 @@ class _LoginViewState extends State<LoginView> {
 
   String? emailError;
   String? passwordError;
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -94,7 +95,7 @@ Navigator.pushReplacement(
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: GlobalColors.mainColor,
+      backgroundColor: GlobalColors.mainColor2,
       body: SingleChildScrollView(
         child: SafeArea(
           child: Container(
@@ -105,7 +106,7 @@ Navigator.pushReplacement(
                 Text(
                   'Welcome Back!',
                   style: TextStyle(
-                    color: GlobalColors.textColor2,
+                    color: GlobalColors.textColor3,
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
                   ),
@@ -114,7 +115,7 @@ Navigator.pushReplacement(
                 Text(
                   'Please sign in to your account',
                   style: TextStyle(
-                    color: GlobalColors.textColor,
+                    color: GlobalColors.buttonColor,
                     fontSize: 7,
                     fontWeight: FontWeight.bold,
                   ),
@@ -128,12 +129,24 @@ Navigator.pushReplacement(
                 ),
                 _errorText(emailError),
                 const SizedBox(height: 12),
-                AppTextField(
-                  controller: passwordController,
-                  hint: "Password",
-                  obscure: true,
-                  onChanged: (_) => _clearError("password"),
-                ),
+AppTextField(
+  controller: passwordController,
+  hint: "Password",
+  obscure: _obscurePassword,
+  onChanged: (_) => _clearError("password"),
+  suffix: IconButton(
+    icon: Icon(
+      _obscurePassword ? Icons.visibility_off : Icons.visibility,
+      color: GlobalColors.textColor,
+      size: 18,
+    ),
+    onPressed: () {
+      setState(() {
+        _obscurePassword = !_obscurePassword;
+      });
+    },
+  ),
+),
                 _errorText(passwordError),
                 const SizedBox(height: 100),
                 AppButton(
@@ -147,7 +160,7 @@ Navigator.pushReplacement(
                     Text(
                       "Don't Have An Account ? ",
                       style: TextStyle(
-                        color: GlobalColors.textColor2,
+                        color: GlobalColors.textColor3,
                         fontSize: 9,
                       ),
                     ),

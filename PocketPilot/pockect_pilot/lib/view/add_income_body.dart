@@ -51,7 +51,7 @@ class _AddIncomeBodyState extends State<AddIncomeBody> {
             Text(
               'Add Income',
               style: TextStyle(
-                color: GlobalColors.textColor2,
+                color: GlobalColors.textColor3,
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
               ),

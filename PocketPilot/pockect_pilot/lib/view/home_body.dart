@@ -26,7 +26,7 @@ class _HomeBodyState extends State<HomeBody> {
         Text(
           'Home',
           style: TextStyle(
-            color: GlobalColors.textColor2,
+            color: GlobalColors.textColor3,
             fontSize: 13,
             fontWeight: FontWeight.bold,
           ),
@@ -35,7 +35,7 @@ class _HomeBodyState extends State<HomeBody> {
         Text(
           'Your financial overview',
           style: TextStyle(
-            color: GlobalColors.textColor,
+            color: GlobalColors.buttonColor,
             fontSize: 7,
             fontWeight: FontWeight.bold,
           ),

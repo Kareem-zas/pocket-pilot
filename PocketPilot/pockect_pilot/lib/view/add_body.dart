@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -15,40 +16,78 @@ class AddBody extends StatefulWidget {
 }
 
 class _AddBodyState extends State<AddBody> {
-  final TextEditingController itemNameController = TextEditingController();
-  final TextEditingController priceController = TextEditingController();
-  final TextEditingController categoryController = TextEditingController();
-  final TextEditingController dateController = TextEditingController();
-  final TextEditingController noteController = TextEditingController();
+  final itemNameController = TextEditingController();
+  final priceController = TextEditingController();
+  final categoryController = TextEditingController();
+  final dateController = TextEditingController();
+  final noteController = TextEditingController();
 
-  bool _ocrHandled = false;
+  bool _handledOnce = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    if (!_ocrHandled &&
-        AddBody.ocrTextCache != null &&
-        AddBody.ocrTextCache!.trim().isNotEmpty) {
-      _fillFromOCR(AddBody.ocrTextCache!);
-      AddBody.ocrTextCache = null;
-      _ocrHandled = true;
-
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Receipt data filled automatically'),
-            ),
-          );
-        }
-      });
+    if (!_handledOnce) {
+      _handleIncomingData();
     }
+  }
+
+  void _handleIncomingData() {
+    final raw = AddBody.ocrTextCache;
+    if (raw == null || raw.trim().isEmpty) return;
+
+    _handledOnce = true;
+    AddBody.ocrTextCache = null;
+
+    bool success = false;
+
+    /// 1️⃣ حاول JSON (Gemini)
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map<String, dynamic>) {
+        _applyParsedData(
+          itemName: decoded['itemName'],
+          total: decoded['total'],
+          date: decoded['date'],
+          category: decoded['category'],
+        );
+        success = true;
+      }
+    } catch (_) {}
+
+    /// 2️⃣ Fallback OCR
+    if (!success) {
+      _applyFallbackOCR(raw);
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Receipt data filled automatically'),
+        ),
+      );
+    });
+
+    setState(() {});
+  }
+
+  void _applyParsedData({
+    dynamic itemName,
+    dynamic total,
+    dynamic date,
+    dynamic category,
+  }) {
+    itemNameController.text = itemName?.toString() ?? '';
+    priceController.text = total?.toString() ?? '';
+    dateController.text = date?.toString() ?? '';
+    categoryController.text = category?.toString() ?? 'Other';
   }
 
   Future<void> _scanReceiptFromCamera() async {
     final picker = ImagePicker();
-    final XFile? image = await picker.pickImage(
+    final image = await picker.pickImage(
       source: ImageSource.camera,
       imageQuality: 85,
     );
@@ -63,16 +102,15 @@ class _AddBodyState extends State<AddBody> {
       File(image.path),
     );
 
-    _fillFromOCR(text);
+    _applyFallbackOCR(text);
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Receipt scanned successfully')),
-      );
-    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Receipt scanned successfully')),
+    );
   }
 
-  void _fillFromOCR(String text) {
+  void _applyFallbackOCR(String text) {
     final lines = text
         .replaceAll(',', '.')
         .split('\n')
@@ -87,18 +125,20 @@ class _AddBodyState extends State<AddBody> {
           (lower.contains('total') ||
               lower.contains('amount') ||
               RegExp(r'\d+\.\d{2}').hasMatch(line))) {
-        final match = RegExp(r'(\d+\.\d{1,2})').firstMatch(line);
+        final match =
+            RegExp(r'(\d+\.\d{1,2})').firstMatch(line);
         if (match != null) {
           priceController.text = match.group(1)!;
         }
       }
 
       if (dateController.text.isEmpty) {
-        final dateMatch =
-            RegExp(r'(\d{4}[-/]\d{2}[-/]\d{2})').firstMatch(line);
-        if (dateMatch != null) {
+        final match = RegExp(
+          r'(\d{4}[-/]\d{2}[-/]\d{2})',
+        ).firstMatch(line);
+        if (match != null) {
           dateController.text =
-              dateMatch.group(1)!.replaceAll('/', '-');
+              match.group(1)!.replaceAll('/', '-');
         }
       }
     }
@@ -111,7 +151,7 @@ class _AddBodyState extends State<AddBody> {
     }
 
     if (categoryController.text.isEmpty) {
-      categoryController.text = 'General';
+      categoryController.text = 'Other';
     }
 
     setState(() {});
@@ -128,7 +168,7 @@ class _AddBodyState extends State<AddBody> {
   }
 
   Future<void> _pickDate() async {
-    final DateTime? picked = await showDatePicker(
+    final picked = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
       firstDate: DateTime(2000),
@@ -144,114 +184,80 @@ class _AddBodyState extends State<AddBody> {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      child: Center(
-        child: Column(
-          children: [
-Row(
-  children: [
-    const SizedBox(width: 85),
-    Text(
-      'Add Expense',
-      style: TextStyle(
-        color: GlobalColors.textColor2,
-        fontSize: 13,
-        fontWeight: FontWeight.bold,
-      ),
-    ),
-    const Spacer(),
-    IconButton(
-      icon: Icon(
-        Icons.camera_alt,
-        color: GlobalColors.textColor2,
-        size: 18,
-      ),
-      onPressed: _scanReceiptFromCamera,
-    ),
-  ],
-),
-
-            const SizedBox(height: 30),
-
-            AppTextField(
-              controller: itemNameController,
-              hint: 'Item Name',
-            ),
-
-            const SizedBox(height: 12),
-
-            AppTextField(
-              controller: priceController,
-              hint: 'Price',
-              keyboardType: TextInputType.number,
-              suffix: Padding(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 11,
-                  horizontal: 20,
-                ),
-                child: Text(
-                  '\$',
-                  style: TextStyle(
-                    color: GlobalColors.textColor,
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                  ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              const SizedBox(width: 85),
+              Text(
+                'Add Expense',
+                style: TextStyle(
+                  color: GlobalColors.textColor3,
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-            ),
-
-            const SizedBox(height: 12),
-
-            AppTextField(
-              controller: categoryController,
-              hint: 'Category',
-            ),
-
-            const SizedBox(height: 12),
-
-            GestureDetector(
-              onTap: _pickDate,
-              child: AbsorbPointer(
-                child: AppTextField(
-                  controller: dateController,
-                  hint: 'Date',
-                  suffix: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 11,
-                      horizontal: 20,
-                    ),
-                    child: Icon(
-                      Icons.calendar_today,
-                      size: 14,
-                      color: GlobalColors.textColor,
-                    ),
-                  ),
+              const Spacer(),
+              IconButton(
+                icon: Icon(
+                  Icons.camera_alt,
+                  color: GlobalColors.textColor3,
+                  size: 18,
                 ),
+                onPressed: _scanReceiptFromCamera,
+              ),
+            ],
+          ),
+          const SizedBox(height: 30),
+
+          AppTextField(
+            controller: itemNameController,
+            hint: 'Item Name',
+          ),
+          const SizedBox(height: 12),
+
+          AppTextField(
+            controller: priceController,
+            hint: 'Price',
+            keyboardType: TextInputType.number,
+          ),
+          const SizedBox(height: 12),
+
+          AppTextField(
+            controller: categoryController,
+            hint: 'Category',
+          ),
+          const SizedBox(height: 12),
+
+          GestureDetector(
+            onTap: _pickDate,
+            child: AbsorbPointer(
+              child: AppTextField(
+                controller: dateController,
+                hint: 'Date',
               ),
             ),
+          ),
+          const SizedBox(height: 12),
 
-            const SizedBox(height: 12),
+          AppTextField(
+            controller: noteController,
+            hint: 'Note (optional)',
+          ),
+          const SizedBox(height: 30),
 
-            AppTextField(
-              controller: noteController,
-              hint: 'Note (optional)',
-            ),
-
-            const SizedBox(height: 30),
-
-            AppButton(
-              text: 'Add Expense',
-              onPressed: () {
-                debugPrint('Item: ${itemNameController.text}');
-                debugPrint('Price: ${priceController.text}');
-                debugPrint('Category: ${categoryController.text}');
-                debugPrint('Date: ${dateController.text}');
-                debugPrint('Note: ${noteController.text}');
-              },
-            ),
-
-            const SizedBox(height: 20),
-          ],
-        ),
+          AppButton(
+            text: 'Add Expense',
+            onPressed: () {
+              debugPrint(itemNameController.text);
+              debugPrint(priceController.text);
+              debugPrint(categoryController.text);
+              debugPrint(dateController.text);
+              debugPrint(noteController.text);
+            },
+          ),
+          const SizedBox(height: 20),
+        ],
       ),
     );
   }

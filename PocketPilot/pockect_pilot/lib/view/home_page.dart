@@ -6,7 +6,7 @@ import 'package:pockect_pilot/view/home_body.dart';
 import 'package:pockect_pilot/view/add_body.dart';
 import 'package:pockect_pilot/view/add_income_body.dart';
 import 'package:pockect_pilot/view/profile_body.dart';
-import 'package:pockect_pilot/services/receipt_ocr_service.dart';
+import 'package:pockect_pilot/services/gemini_receipt_service.dart';
 
 class HomePage extends StatefulWidget {
   final double currentBalance;
@@ -28,35 +28,43 @@ class _HomePageState extends State<HomePage> {
 
   Key _addBodyKey = UniqueKey();
 
-  Future<void> _openCamera() async {
-    final picker = ImagePicker();
-    final XFile? image = await picker.pickImage(
-      source: ImageSource.camera,
-      imageQuality: 85,
-    );
+ Future<void> _openCamera() async {
+  final picker = ImagePicker();
+  final XFile? image = await picker.pickImage(
+    source: ImageSource.camera,
+    imageQuality: 85,
+  );
 
-    if (image == null) return;
+  if (image == null) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Scanning receipt...')),
-    );
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(content: Text('Analyzing receipt...')),
+  );
 
-    final text = await ReceiptOCRService.extractText(
-      File(image.path),
-    );
+  try {
+    final jsonResult =
+        await GeminiReceiptService.analyzeReceipt(File(image.path));
 
     setState(() {
-      AddBody.ocrTextCache = text;
+      AddBody.ocrTextCache = jsonResult;
+
       _addBodyKey = UniqueKey();
+
       _isIncome = false;
       _currentIndex = 1;
     });
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Gemini failed: $e')),
+    );
   }
+}
+
 
   void _showExpenseOptions() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: GlobalColors.mainColor,
+      backgroundColor: GlobalColors.mainColor2,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -98,7 +106,7 @@ class _HomePageState extends State<HomePage> {
   void _showAddOptions() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: GlobalColors.mainColor,
+      backgroundColor: GlobalColors.mainColor2,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -174,7 +182,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: GlobalColors.mainColor,
+      backgroundColor: GlobalColors.mainColor2,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.only(top: 50, left: 16, right: 16),
@@ -195,9 +203,9 @@ class _HomePageState extends State<HomePage> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
-        backgroundColor: GlobalColors.mainColor,
+        backgroundColor: GlobalColors.mainColor2,
         selectedItemColor: GlobalColors.buttonColor,
-        unselectedItemColor: GlobalColors.textColor,
+        unselectedItemColor: GlobalColors.textColor3,
         type: BottomNavigationBarType.fixed,
         selectedFontSize: 9,
         unselectedFontSize: 9,

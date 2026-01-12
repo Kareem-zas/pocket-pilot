@@ -57,7 +57,7 @@ class AppTextField extends StatelessWidget {
         obscureText: obscure,
         enabled: enabled,
         keyboardType: keyboardType,
-        style: const TextStyle(color: GlobalColors.textColor2),
+        style: const TextStyle(color: GlobalColors.textColor3),
         decoration: _decoration(),
         onChanged: onChanged,
       ),

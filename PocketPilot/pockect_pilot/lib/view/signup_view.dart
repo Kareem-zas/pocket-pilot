@@ -130,7 +130,7 @@ class _SignUpViewState extends State<SignUpView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: GlobalColors.mainColor,
+      backgroundColor: GlobalColors.mainColor2,
       body: SingleChildScrollView(
         child: SafeArea(
           child: Container(
@@ -141,7 +141,7 @@ class _SignUpViewState extends State<SignUpView> {
                 Text(
                   'Create Account',
                   style: TextStyle(
-                    color: GlobalColors.textColor2,
+                    color: GlobalColors.textColor3,
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
                   ),
@@ -155,7 +155,7 @@ class _SignUpViewState extends State<SignUpView> {
                     Text(
                       'Please fill the form to create an account',
                       style: TextStyle(
-                        color: GlobalColors.textColor,
+                        color: GlobalColors.buttonColor,
                         fontSize: 7,
                         fontWeight: FontWeight.bold,
                       ),
@@ -206,7 +206,8 @@ class _SignUpViewState extends State<SignUpView> {
                     onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                     icon: Icon(
                       _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                      color: GlobalColors.textColor2,
+                      color: GlobalColors.textColor3,
+                      size: 18,
                     ),
                   ),
                   onChanged: (_) => _clearFieldError('password'),
@@ -222,7 +223,8 @@ class _SignUpViewState extends State<SignUpView> {
                     onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
                     icon: Icon(
                       _obscureConfirm ? Icons.visibility_off : Icons.visibility,
-                      color: GlobalColors.textColor2,
+                      color: GlobalColors.textColor3,
+                      size: 18,
                     ),
                   ),
                   onChanged: (_) => _clearFieldError('password'),
@@ -245,7 +247,7 @@ class _SignUpViewState extends State<SignUpView> {
                     Text(
                       "Already have an account ? ",
                       style: TextStyle(
-                        color: GlobalColors.textColor2,
+                        color: GlobalColors.textColor3,
                         fontSize: 9,
                       ),
                     ),
