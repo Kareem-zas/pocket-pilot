@@ -1,26 +1,55 @@
 import 'package:flutter/material.dart';
 import 'package:pockect_pilot/utils/global_colors.dart';
 import 'package:pockect_pilot/view/expenses_screen.dart';
-import 'package:pockect_pilot/view/fixed_expenses_screen.dart';
+import 'package:pockect_pilot/view/fixed_expenses_history.dart';
 import 'package:pockect_pilot/view/income_screen.dart';
+import 'package:pockect_pilot/services/home_service.dart';
 
 class HomeBody extends StatefulWidget {
-  final double currentBalance;
-  final double expenses;
-
-  const HomeBody({
-    super.key,
-    required this.currentBalance,
-    required this.expenses,
-  });
+  const HomeBody({super.key});
 
   @override
   State<HomeBody> createState() => _HomeBodyState();
 }
 
 class _HomeBodyState extends State<HomeBody> {
+  double currentBalance = 0.0;
+  double totalIncome = 0.0;
+  double totalExpenses = 0.0;
+  double totalFixedExpenses = 0.0;
+  bool loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    loadHomeData();
+  }
+
+  Future<void> loadHomeData() async {
+    try {
+      final data = await HomeService.fetchHomeData();
+
+      setState(() {
+        currentBalance = data['currentBalance'] ?? 0.0;
+        totalIncome = data['totalIncome'] ?? 0.0;
+        totalExpenses = data['totalExpenses'] ?? 0.0;
+        totalFixedExpenses = data['totalFixedExpenses'] ?? 0.0;
+        loading = false;
+      });
+    } catch (e) {
+      debugPrint('HOME ERROR: $e');
+      setState(() {
+        loading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return Column(
       children: [
         Text(
@@ -31,16 +60,6 @@ class _HomeBodyState extends State<HomeBody> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: 6),
-        Text(
-          'Your financial overview',
-          style: TextStyle(
-            color: GlobalColors.buttonColor,
-            fontSize: 7,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-
         const SizedBox(height: 40),
 
         Row(
@@ -48,7 +67,7 @@ class _HomeBodyState extends State<HomeBody> {
             Expanded(
               child: _box(
                 title: 'Current Balance',
-                value: '\$${widget.currentBalance.toStringAsFixed(2)}',
+                value: '\$${currentBalance.toStringAsFixed(2)}',
                 color: GlobalColors.buttonColor,
               ),
             ),
@@ -56,7 +75,7 @@ class _HomeBodyState extends State<HomeBody> {
             Expanded(
               child: _box(
                 title: 'Expenses',
-                value: '\$${widget.expenses.toStringAsFixed(2)}',
+                value: '\$${totalExpenses.toStringAsFixed(2)}',
                 color: GlobalColors.expensesColor,
                 onTap: () {
                   Navigator.push(
@@ -78,7 +97,7 @@ class _HomeBodyState extends State<HomeBody> {
             Expanded(
               child: _box(
                 title: 'Income',
-                value: '\$0.00',
+                value: '\$${totalIncome.toStringAsFixed(2)}',
                 color: Colors.green,
                 onTap: () {
                   Navigator.push(
@@ -87,20 +106,20 @@ class _HomeBodyState extends State<HomeBody> {
                       builder: (_) => const IncomeScreen(),
                     ),
                   );
-                }
+                },
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: _box(
                 title: 'Fixed Expenses',
-                value: '\$0.00',
+                value: '\$${totalFixedExpenses.toStringAsFixed(2)}',
                 color: GlobalColors.expensesColor,
                 onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => const FixedExpensesScreen(),
+                      builder: (_) => const FixedExpensesHistory(),
                     ),
                   );
                 },

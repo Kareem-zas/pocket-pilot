@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:pockect_pilot/utils/global_colors.dart';
 import 'package:pockect_pilot/widgets/app_widgets.dart';
 import 'package:pockect_pilot/services/receipt_ocr_service.dart';
+import 'package:pockect_pilot/services/variable_expenses_service.dart';
 
 class AddBody extends StatefulWidget {
   static String? ocrTextCache;
@@ -248,13 +249,47 @@ class _AddBodyState extends State<AddBody> {
 
           AppButton(
             text: 'Add Expense',
-            onPressed: () {
-              debugPrint(itemNameController.text);
-              debugPrint(priceController.text);
-              debugPrint(categoryController.text);
-              debugPrint(dateController.text);
-              debugPrint(noteController.text);
-            },
+           onPressed: () async {
+  final title = itemNameController.text.trim();
+  final amount = double.tryParse(priceController.text.trim());
+  final category = categoryController.text.trim();
+  final dateText = dateController.text.trim();
+  final notes = noteController.text.trim();
+
+  if (title.isEmpty || amount == null || category.isEmpty || dateText.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Please fill all required fields')),
+    );
+    return;
+  }
+
+  try {
+    await VariableExpensesService.addExpense(
+      title: title,
+      amount: amount,
+      category: category,
+      date: DateTime.parse(dateText),
+      notes: notes.isEmpty ? null : notes,
+    );
+
+    itemNameController.clear();
+    priceController.clear();
+    categoryController.clear();
+    dateController.clear();
+    noteController.clear();
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Expense added successfully')),
+    );
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(e.toString())),
+    );
+  }
+},
+
           ),
           const SizedBox(height: 20),
         ],

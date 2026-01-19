@@ -6,17 +6,11 @@ import 'package:pockect_pilot/view/home_body.dart';
 import 'package:pockect_pilot/view/add_body.dart';
 import 'package:pockect_pilot/view/add_income_body.dart';
 import 'package:pockect_pilot/view/profile_body.dart';
+import 'package:pockect_pilot/view/fixed_expenses_screen.dart';
 import 'package:pockect_pilot/services/gemini_receipt_service.dart';
 
 class HomePage extends StatefulWidget {
-  final double currentBalance;
-  final double expenses;
-
-  const HomePage({
-    super.key,
-    required this.currentBalance,
-    this.expenses = 0,
-  });
+  const HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -25,43 +19,42 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _currentIndex = 0;
   bool _isIncome = false;
+  bool _isFixedExpense = false;
 
   Key _addBodyKey = UniqueKey();
 
- Future<void> _openCamera() async {
-  final picker = ImagePicker();
-  final XFile? image = await picker.pickImage(
-    source: ImageSource.camera,
-    imageQuality: 85,
-  );
-
-  if (image == null) return;
-
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(content: Text('Analyzing receipt...')),
-  );
-
-  try {
-    final jsonResult =
-        await GeminiReceiptService.analyzeReceipt(File(image.path));
-
-    setState(() {
-      AddBody.ocrTextCache = jsonResult;
-
-      _addBodyKey = UniqueKey();
-
-      _isIncome = false;
-      _currentIndex = 1;
-    });
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Gemini failed: $e')),
+  Future<void> _openCamera() async {
+    final picker = ImagePicker();
+    final XFile? image = await picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 85,
     );
+
+    if (image == null) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Analyzing receipt...')),
+    );
+
+    try {
+      final jsonResult =
+          await GeminiReceiptService.analyzeReceipt(File(image.path));
+
+      setState(() {
+        AddBody.ocrTextCache = jsonResult;
+        _addBodyKey = UniqueKey();
+        _isIncome = false;
+        _isFixedExpense = false;
+        _currentIndex = 1;
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gemini failed: $e')),
+      );
+    }
   }
-}
 
-
-  void _showExpenseOptions() {
+  void _showVariableExpenseOptions() {
     showModalBottomSheet(
       context: context,
       backgroundColor: GlobalColors.mainColor2,
@@ -82,6 +75,7 @@ class _HomePageState extends State<HomePage> {
                   Navigator.pop(context);
                   setState(() {
                     _isIncome = false;
+                    _isFixedExpense = false;
                     _currentIndex = 1;
                   });
                 },
@@ -94,6 +88,53 @@ class _HomePageState extends State<HomePage> {
                 onTap: () {
                   Navigator.pop(context);
                   _openCamera();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showExpenseTypeOptions() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: GlobalColors.mainColor2,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 15),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _option(
+                icon: Icons.swap_horiz,
+                text: 'Variable Expense',
+                color: GlobalColors.buttonColor,
+                onTap: () {
+                  Navigator.pop(context);
+                  Future.delayed(
+                    Duration.zero,
+                    _showVariableExpenseOptions,
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
+              _option(
+                icon: Icons.lock_outline,
+                text: 'Fixed Expense',
+                color: GlobalColors.expensesColor,
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const FixedExpensesScreen(),
+                    ),
+                  );
                 },
               ),
             ],
@@ -122,7 +163,10 @@ class _HomePageState extends State<HomePage> {
                 color: GlobalColors.expensesColor,
                 onTap: () {
                   Navigator.pop(context);
-                  Future.delayed(Duration.zero, _showExpenseOptions);
+                  Future.delayed(
+                    Duration.zero,
+                    _showExpenseTypeOptions,
+                  );
                 },
               ),
               const SizedBox(height: 12),
@@ -134,6 +178,7 @@ class _HomePageState extends State<HomePage> {
                   Navigator.pop(context);
                   setState(() {
                     _isIncome = true;
+                    _isFixedExpense = false;
                     _currentIndex = 1;
                   });
                 },
@@ -189,10 +234,7 @@ class _HomePageState extends State<HomePage> {
           child: IndexedStack(
             index: _currentIndex,
             children: [
-              HomeBody(
-                currentBalance: widget.currentBalance,
-                expenses: widget.expenses,
-              ),
+              const HomeBody(),
               _isIncome
                   ? const AddIncomeBody()
                   : AddBody(key: _addBodyKey),
