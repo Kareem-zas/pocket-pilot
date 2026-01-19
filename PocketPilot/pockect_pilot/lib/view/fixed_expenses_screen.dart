@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:pockect_pilot/utils/global_colors.dart';
 import 'package:pockect_pilot/widgets/app_widgets.dart';
 import 'package:pockect_pilot/services/fixed_expenses_service.dart';
+import 'package:pockect_pilot/view/fixed_expenses_history.dart';
 
 class FixedExpensesScreen extends StatefulWidget {
   const FixedExpensesScreen({super.key});
@@ -16,6 +17,7 @@ class _FixedExpensesScreenState extends State<FixedExpensesScreen> {
   final dateController = TextEditingController();
 
   String frequency = 'monthly';
+  bool loading = false;
 
   @override
   void dispose() {
@@ -40,28 +42,45 @@ class _FixedExpensesScreenState extends State<FixedExpensesScreen> {
   }
 
   Future<void> _addFixedExpense() async {
+    if (loading) return;
+
     final title = titleController.text.trim();
     final amount = double.tryParse(amountController.text.trim());
     final dateText = dateController.text.trim();
 
-    if (title.isEmpty || amount == null || dateText.isEmpty) return;
+    if (title.isEmpty || amount == null || dateText.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill all fields')),
+      );
+      return;
+    }
 
-    await FixedExpensesService.addFixedExpenseItem(
-      title: title,
-      amount: amount,
-      frequency: frequency,
-      startDate: DateTime.parse(dateText),
-    );
+    setState(() => loading = true);
 
-    titleController.clear();
-    amountController.clear();
-    dateController.clear();
+    try {
+      await FixedExpensesService.addFixedExpenseItem(
+        title: title,
+        amount: amount,
+        frequency: frequency,
+        startDate: DateTime.parse(dateText),
+      );
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Fixed expense added')),
-    );
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const FixedExpensesHistory(),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
   }
 
   @override
@@ -156,8 +175,8 @@ class _FixedExpensesScreenState extends State<FixedExpensesScreen> {
               const SizedBox(height: 30),
 
               AppButton(
-                text: 'Add Fixed Expense',
-                onPressed: _addFixedExpense,
+                text: loading ? 'Saving...' : 'Add Fixed Expense',
+                onPressed: loading ? () {} : _addFixedExpense,
               ),
               const SizedBox(height: 20),
             ],

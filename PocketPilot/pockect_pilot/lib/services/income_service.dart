@@ -8,10 +8,9 @@ class IncomeService {
   static Future<Map<String, dynamic>> insertIncome({
     required String source,
     required double amount,
-    String? date,
+    required DateTime date,
     bool isRecurring = false,
     String? frequency,
-    String? icon,
     String? notes,
   }) async {
     final token = await TokenService.getToken();
@@ -25,17 +24,16 @@ class IncomeService {
       body: jsonEncode({
         'source': source,
         'amount': amount,
-        'date': date,
+        'date': date.toIso8601String(),
         'isRecurring': isRecurring,
         'frequency': frequency,
-        'icon': icon,
         'notes': notes,
       }),
     );
 
     final data = jsonDecode(response.body);
 
-    if (response.statusCode != 201) {
+    if (response.statusCode != 201 && response.statusCode != 200) {
       throw Exception(data['message'] ?? 'Failed to add income');
     }
 
@@ -46,7 +44,7 @@ class IncomeService {
     final token = await TokenService.getToken();
 
     final response = await http.get(
-      Uri.parse('$baseUrl/income'),
+      Uri.parse('$baseUrl/dashboard'),
       headers: {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
@@ -59,48 +57,11 @@ class IncomeService {
       throw Exception(data['message'] ?? 'Failed to fetch income');
     }
 
-    return data['incomes'];
-  }
-
-  static Future<Map<String, dynamic>> updateIncome({
-    required String id,
-    required Map<String, dynamic> updates,
-  }) async {
-    final token = await TokenService.getToken();
-
-    final response = await http.patch(
-      Uri.parse('$baseUrl/income/$id'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode(updates),
-    );
-
-    final data = jsonDecode(response.body);
-
-    if (response.statusCode != 200) {
-      throw Exception(data['message'] ?? 'Failed to update income');
-    }
-
-    return data;
-  }
-
-  static Future<void> deleteIncome(String id) async {
-    final token = await TokenService.getToken();
-
-    final response = await http.delete(
-      Uri.parse('$baseUrl/income/$id'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-    );
-
-    final data = jsonDecode(response.body);
-
-    if (response.statusCode != 200) {
-      throw Exception(data['message'] ?? 'Failed to delete income');
-    }
+    // 🔥 القراءة الصحيحة من Dashboard API
+    return data['data']
+            ?['summary']
+            ?['income']
+            ?['details'] ??
+        [];
   }
 }

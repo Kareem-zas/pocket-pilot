@@ -12,6 +12,7 @@ class FixedExpensesHistory extends StatefulWidget {
 class _FixedExpensesHistoryState extends State<FixedExpensesHistory> {
   List<dynamic> items = [];
   bool loading = true;
+  final Set<String> updatingItems = {};
 
   @override
   void initState() {
@@ -33,16 +34,37 @@ class _FixedExpensesHistoryState extends State<FixedExpensesHistory> {
 
   Future<void> toggleActive(int index) async {
     final item = items[index];
-    final newValue = !item['isActive'];
+    final String itemId = item['_id'];
+    final bool oldValue = item['isActive'] ?? true;
+    final bool newValue = !oldValue;
+
+    if (updatingItems.contains(itemId)) return;
 
     setState(() {
+      updatingItems.add(itemId);
       items[index]['isActive'] = newValue;
     });
 
-    await FixedExpensesService.updateFixedExpenseActivity(
-      itemId: item['_id'],
-      isActive: newValue,
-    );
+    try {
+      await FixedExpensesService.updateFixedExpenseActivity(
+        itemId: itemId,
+        isActive: newValue,
+      );
+    } catch (e) {
+      setState(() {
+        items[index]['isActive'] = oldValue;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to update expense status'),
+        ),
+      );
+    } finally {
+      setState(() {
+        updatingItems.remove(itemId);
+      });
+    }
   }
 
   @override

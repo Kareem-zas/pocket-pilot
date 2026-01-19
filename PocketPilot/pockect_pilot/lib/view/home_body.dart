@@ -12,35 +12,51 @@ class HomeBody extends StatefulWidget {
   State<HomeBody> createState() => _HomeBodyState();
 }
 
-class _HomeBodyState extends State<HomeBody> {
-  double currentBalance = 0.0;
-  double totalIncome = 0.0;
-  double totalExpenses = 0.0;
-  double totalFixedExpenses = 0.0;
+class _HomeBodyState extends State<HomeBody>
+    with WidgetsBindingObserver {
+  double balance = 0;
+  double totalIncome = 0;
+  double variableExpenses = 0;
+  double totalFixed = 0;
   bool loading = true;
 
   @override
   void initState() {
     super.initState();
-    loadHomeData();
+    WidgetsBinding.instance.addObserver(this);
+    loadDashboard();
   }
 
-  Future<void> loadHomeData() async {
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      loadDashboard();
+    }
+  }
+
+  Future<void> loadDashboard() async {
     try {
-      final data = await HomeService.fetchHomeData();
+      final data = await HomeService.fetchDashboard();
+
+      if (!mounted) return;
 
       setState(() {
-        currentBalance = data['currentBalance'] ?? 0.0;
-        totalIncome = data['totalIncome'] ?? 0.0;
-        totalExpenses = data['totalExpenses'] ?? 0.0;
-        totalFixedExpenses = data['totalFixedExpenses'] ?? 0.0;
+        balance = data['balance']!;
+        totalIncome = data['totalIncome']!;
+        variableExpenses = data['variableExpenses']!;
+        totalFixed = data['totalFixed']!;
         loading = false;
       });
     } catch (e) {
       debugPrint('HOME ERROR: $e');
-      setState(() {
-        loading = false;
-      });
+      if (!mounted) return;
+      setState(() => loading = false);
     }
   }
 
@@ -67,7 +83,7 @@ class _HomeBodyState extends State<HomeBody> {
             Expanded(
               child: _box(
                 title: 'Current Balance',
-                value: '\$${currentBalance.toStringAsFixed(2)}',
+                value: '\$${balance.toStringAsFixed(2)}',
                 color: GlobalColors.buttonColor,
               ),
             ),
@@ -75,15 +91,16 @@ class _HomeBodyState extends State<HomeBody> {
             Expanded(
               child: _box(
                 title: 'Expenses',
-                value: '\$${totalExpenses.toStringAsFixed(2)}',
+                value: '\$${variableExpenses.toStringAsFixed(2)}',
                 color: GlobalColors.expensesColor,
-                onTap: () {
-                  Navigator.push(
+                onTap: () async {
+                  await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (_) => const ExpensesScreen(),
                     ),
                   );
+                  loadDashboard();
                 },
               ),
             ),
@@ -99,13 +116,14 @@ class _HomeBodyState extends State<HomeBody> {
                 title: 'Income',
                 value: '\$${totalIncome.toStringAsFixed(2)}',
                 color: Colors.green,
-                onTap: () {
-                  Navigator.push(
+                onTap: () async {
+                  await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (_) => const IncomeScreen(),
                     ),
                   );
+                  loadDashboard();
                 },
               ),
             ),
@@ -113,15 +131,16 @@ class _HomeBodyState extends State<HomeBody> {
             Expanded(
               child: _box(
                 title: 'Fixed Expenses',
-                value: '\$${totalFixedExpenses.toStringAsFixed(2)}',
+                value: '\$${totalFixed.toStringAsFixed(2)}',
                 color: GlobalColors.expensesColor,
-                onTap: () {
-                  Navigator.push(
+                onTap: () async {
+                  await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (_) => const FixedExpensesHistory(),
                     ),
                   );
+                  loadDashboard();
                 },
               ),
             ),

@@ -3,9 +3,9 @@ import 'package:http/http.dart' as http;
 import 'token_service.dart';
 
 class HomeService {
-  static const String baseUrl = 'http://localhost:8000/api/summary';
+  static const String baseUrl = 'http://localhost:8000/api/dashboard';
 
-  static Future<Map<String, double>> fetchHomeData() async {
+  static Future<Map<String, double>> fetchDashboard() async {
     final token = await TokenService.getToken();
 
     final response = await http.get(
@@ -16,18 +16,31 @@ class HomeService {
       },
     );
 
-    final data = jsonDecode(response.body);
-
     if (response.statusCode != 200) {
-      throw Exception('Failed to load home data');
+      throw Exception('Failed to load dashboard');
     }
 
+    final decoded = jsonDecode(response.body);
+    final data = decoded['data'];
+    final summary = data['summary'];
+
+    final totalIncome =
+        (summary['income']['total'] as num).toDouble();
+
+    final totalVariable =
+        (summary['expenses']['variable']['total'] as num).toDouble();
+
+    final totalFixed =
+        (summary['expenses']['fixed']['total'] as num).toDouble();
+
+    final balance =
+        (summary['balance'] as num).toDouble();
+
     return {
-      'currentBalance': (data['balance'] as num).toDouble(),
-      'totalIncome': (data['totalIncome'] as num).toDouble(),
-      'totalExpenses': (data['totalExpenses'] as num).toDouble(),
-      'totalFixedExpenses':
-          (data['totalFixedExpenses'] as num).toDouble(),
+      'balance': balance,
+      'totalIncome': totalIncome,
+      'variableExpenses': totalVariable,
+      'totalFixed': totalFixed,
     };
   }
 }

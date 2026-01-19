@@ -15,24 +15,21 @@ class _MoneyInfoViewState extends State<MoneyInfoView> {
   final TextEditingController amountController = TextEditingController();
   final TextEditingController sourceController = TextEditingController();
   final TextEditingController notesController = TextEditingController();
-  final TextEditingController balanceController = TextEditingController();
 
   bool isRecurring = false;
   String? frequency;
   DateTime? selectedDate;
 
   final Map<String, String> frequencies = {
-  'Monthly': 'monthly',
-  'Yearly': 'yearly',
-};
-
+    'Monthly': 'monthly',
+    'Yearly': 'yearly',
+  };
 
   @override
   void dispose() {
     amountController.dispose();
     sourceController.dispose();
     notesController.dispose();
-    balanceController.dispose();
     super.dispose();
   }
 
@@ -56,30 +53,33 @@ class _MoneyInfoViewState extends State<MoneyInfoView> {
 
   Future<void> _saveIncome() async {
     try {
-      if (_isAmountValid) {
-        await IncomeService.insertIncome(
-          source: sourceController.text.trim().isEmpty
-              ? 'General'
-              : sourceController.text.trim(),
-          amount: double.parse(amountController.text.trim()),
-          date: selectedDate?.toIso8601String(),
-          isRecurring: isRecurring,
-          frequency: isRecurring ? frequency : null,
-          notes: notesController.text.trim().isEmpty
-              ? null
-              : notesController.text.trim(),
-        );
+      if (!_isAmountValid || selectedDate == null) {
+        throw Exception('Please fill required fields');
       }
 
-  
+      if (isRecurring && frequency == null) {
+        throw Exception('Please select frequency');
+      }
 
-     Navigator.pushReplacement(
-  context,
-  MaterialPageRoute(
-    builder: (_) => const HomePage(),
-  ),
-);
+      await IncomeService.insertIncome(
+        source: sourceController.text.trim().isEmpty
+            ? 'General'
+            : sourceController.text.trim(),
+        amount: double.parse(amountController.text.trim()),
+        date: selectedDate!,
+        isRecurring: isRecurring,
+        frequency: isRecurring ? frequency : null,
+        notes: notesController.text.trim().isEmpty
+            ? null
+            : notesController.text.trim(),
+      );
 
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const HomePage()),
+      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString())),
@@ -91,117 +91,138 @@ class _MoneyInfoViewState extends State<MoneyInfoView> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: GlobalColors.mainColor2,
-      body: SingleChildScrollView(
-        child: SafeArea(
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.only(top: 50),
-            child: Column(
-              children: [
-                Text(
-                  'Income Info',
-                  style: TextStyle(
-                    color: GlobalColors.textColor3,
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                  ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.only(top: 50),
+          child: Column(
+            children: [
+              Text(
+                'Income Info',
+                style: TextStyle(
+                  color: GlobalColors.textColor3,
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
                 ),
-                const SizedBox(height: 30),
+              ),
+              const SizedBox(height: 30),
 
-                AppTextField(
-                  controller: amountController,
-                  hint: "Income Amount",
-                  keyboardType: TextInputType.number,
-                  suffix: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20),
-                    child: Text("\$"),
-                  ),
-                  onChanged: (_) => setState(() {}),
-                ),
-
-                const SizedBox(height: 12),
-
-                Opacity(
-                  opacity: _isAmountValid ? 1 : 0.4,
-                  child: AppTextField(
-                    controller: sourceController,
-                    hint: "Income Source (e.g. Salary)",
-                    enabled: _isAmountValid,
-                  ),
-                ),
-
-                const SizedBox(height: 12),
-
-                SwitchListTile(
-                  title: const Text(
-                    'Recurring Income',
-                    style: TextStyle(fontSize: 11),
-                  ),
-                  value: isRecurring,
-                  onChanged: (val) {
-                    setState(() {
-                      isRecurring = val;
-                      if (!val) frequency = null;
-                    });
-                  },
-                ),
-
-                if (isRecurring)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 40),
-                    child: DropdownButtonFormField<String>(
-  value: frequency,
-  hint: const Text("Select Frequency"),
-  items: frequencies.entries
-      .map(
-        (e) => DropdownMenuItem(
-          value: e.value,
-          child: Text(e.key),
+             AppTextField(
+  controller: amountController,
+  hint: "Income Amount",
+  keyboardType: TextInputType.number,
+  suffix: SizedBox(
+    width: 40,
+    child: Center(
+      child: Text(
+        "\$",
+        style: TextStyle(
+          color: GlobalColors.textColor3,
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
         ),
-      )
-      .toList(),
-  onChanged: (val) => setState(() => frequency = val),
-)
-,
-                  ),
-
-                const SizedBox(height: 12),
-
-                
-AppButton(
-  text: selectedDate == null
-      ? "Pick Date"
-      : selectedDate!.toLocal().toString().split(' ')[0],
-  onPressed: _pickDate,
+      ),
+    ),
+  ),
+  onChanged: (_) => setState(() {}),
 ),
 
 
+              const SizedBox(height: 12),
 
-                const SizedBox(height: 12),
+              Opacity(
+                opacity: _isAmountValid ? 1 : 0.4,
+                child: AppTextField(
+                  controller: sourceController,
+                  hint: "Income Source (e.g. Salary)",
+                  enabled: _isAmountValid,
+                ),
+              ),
 
-                AppTextField(
-                  controller: notesController,
-                  hint: "Notes (optional)",
+              const SizedBox(height: 18),
+
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 70),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Recurring Income',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: GlobalColors.textColor3,
+                      ),
+                    ),
+                    Switch(
+                      value: isRecurring,
+                      onChanged: (val) {
+                        setState(() {
+                          isRecurring = val;
+                          if (!val) frequency = null;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
+              if (isRecurring)
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 70, vertical: 8),
+                  child: DropdownButtonFormField<String>(
+                    value: frequency,
+                    hint: const Text("Select Frequency"),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: GlobalColors.textFieldColor,
+                      contentPadding: const EdgeInsets.symmetric(
+                          vertical: 8, horizontal: 16),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    items: frequencies.entries
+                        .map(
+                          (e) => DropdownMenuItem(
+                            value: e.value,
+                            child: Text(e.key),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (val) =>
+                        setState(() => frequency = val),
+                  ),
                 ),
 
-                const SizedBox(height: 12),
+              const SizedBox(height: 12),
 
-                AppTextField(
-                  controller: balanceController,
-                  hint: "Current Balance",
-                  keyboardType: TextInputType.number,
-                ),
+              AppButton(
+                text: selectedDate == null
+                    ? "Pick Date"
+                    : selectedDate!
+                        .toLocal()
+                        .toString()
+                        .split(' ')[0],
+                onPressed: _pickDate,
+              ),
 
-                const SizedBox(height: 30),
+              const SizedBox(height: 12),
 
-                AppButton(
-                  text: "Save",
-                  onPressed: _saveIncome,
-                ),
+              AppTextField(
+                controller: notesController,
+                hint: "Notes (optional)",
+              ),
 
-                const SizedBox(height: 20),
-              ],
-            ),
+              const SizedBox(height: 30),
+
+              AppButton(
+                text: "Save",
+                onPressed: _saveIncome,
+              ),
+
+              const SizedBox(height: 20),
+            ],
           ),
         ),
       ),

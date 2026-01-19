@@ -25,9 +25,9 @@ class SplashView extends StatelessWidget {
 );
     });
     return Scaffold(
-      backgroundColor: GlobalColors.mainColor ,
+      backgroundColor: GlobalColors.mainColor2,
       body: Center(
-        child: Image.asset('assets/images/app_logo.png',
+        child: Image.asset('assets/images/pocket-pilot-logo.png',
         width: 235,
         height: 235,),
       ),
