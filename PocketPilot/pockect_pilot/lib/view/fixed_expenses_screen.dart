@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:pockect_pilot/utils/global_colors.dart';
 import 'package:pockect_pilot/widgets/app_widgets.dart';
 import 'package:pockect_pilot/services/fixed_expenses_service.dart';
-import 'package:pockect_pilot/view/fixed_expenses_history.dart';
+import 'package:pockect_pilot/view/home_page.dart'; // ✅ ADDED
 
 class FixedExpensesScreen extends StatefulWidget {
   const FixedExpensesScreen({super.key});
@@ -67,11 +67,11 @@ class _FixedExpensesScreenState extends State<FixedExpensesScreen> {
 
       if (!mounted) return;
 
-      Navigator.pushReplacement(
+      // ✅ CHANGE: Redirect to Home Page after adding fixed expense
+      Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(
-          builder: (_) => const FixedExpensesHistory(),
-        ),
+        MaterialPageRoute(builder: (_) => const HomePage()),
+        (_) => false,
       );
     } catch (e) {
       if (!mounted) return;

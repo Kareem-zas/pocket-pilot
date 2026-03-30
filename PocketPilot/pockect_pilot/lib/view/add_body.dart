@@ -4,8 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:pockect_pilot/utils/global_colors.dart';
 import 'package:pockect_pilot/widgets/app_widgets.dart';
-import 'package:pockect_pilot/services/receipt_ocr_service.dart';
 import 'package:pockect_pilot/services/variable_expenses_service.dart';
+import 'package:pockect_pilot/services/gemini_receipt_service.dart';
+import 'package:pockect_pilot/view/home_page.dart';
 
 class AddBody extends StatefulWidget {
   static String? ocrTextCache;
@@ -28,12 +29,12 @@ class _AddBodyState extends State<AddBody> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-
     if (!_handledOnce) {
       _handleIncomingData();
     }
   }
 
+  /// ✅ READ AI RESULT (Gemini JSON)
   void _handleIncomingData() {
     final raw = AddBody.ocrTextCache;
     if (raw == null || raw.trim().isEmpty) return;
@@ -41,121 +42,58 @@ class _AddBodyState extends State<AddBody> {
     _handledOnce = true;
     AddBody.ocrTextCache = null;
 
-    bool success = false;
-
-    /// 1️⃣ حاول JSON (Gemini)
     try {
       final decoded = jsonDecode(raw);
       if (decoded is Map<String, dynamic>) {
-        _applyParsedData(
-          itemName: decoded['itemName'],
-          total: decoded['total'],
-          date: decoded['date'],
-          category: decoded['category'],
-        );
-        success = true;
+        itemNameController.text =
+            decoded['itemName']?.toString().trim() ?? '';
+        priceController.text =
+            decoded['total']?.toString().trim() ?? '';
+        dateController.text =
+            decoded['date']?.toString().trim() ?? '';
+        categoryController.text =
+            decoded['category']?.toString().trim() ?? 'Other';
       }
-    } catch (_) {}
-
-    /// 2️⃣ Fallback OCR
-    if (!success) {
-      _applyFallbackOCR(raw);
+    } catch (e) {
+      debugPrint('AI JSON PARSE ERROR: $e');
     }
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Receipt data filled automatically'),
-        ),
-      );
-    });
 
     setState(() {});
   }
 
-  void _applyParsedData({
-    dynamic itemName,
-    dynamic total,
-    dynamic date,
-    dynamic category,
-  }) {
-    itemNameController.text = itemName?.toString() ?? '';
-    priceController.text = total?.toString() ?? '';
-    dateController.text = date?.toString() ?? '';
-    categoryController.text = category?.toString() ?? 'Other';
-  }
-
-  Future<void> _scanReceiptFromCamera() async {
+  /// 🔥 SAME LOGIC AS NAV BAR CAMERA (Gemini)
+  Future<void> _openCameraWithAI() async {
     final picker = ImagePicker();
-    final image = await picker.pickImage(
+    final XFile? image = await picker.pickImage(
       source: ImageSource.camera,
       imageQuality: 85,
     );
 
     if (image == null) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Scanning receipt...')),
-    );
-
-    final text = await ReceiptOCRService.extractText(
-      File(image.path),
-    );
-
-    _applyFallbackOCR(text);
-
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Receipt scanned successfully')),
+      const SnackBar(content: Text('Analyzing receipt...')),
     );
-  }
 
-  void _applyFallbackOCR(String text) {
-    final lines = text
-        .replaceAll(',', '.')
-        .split('\n')
-        .map((e) => e.trim())
-        .where((e) => e.isNotEmpty)
-        .toList();
+    try {
+      final jsonResult =
+          await GeminiReceiptService.analyzeReceipt(File(image.path));
 
-    for (final line in lines) {
-      final lower = line.toLowerCase();
+      if (!mounted) return;
 
-      if (priceController.text.isEmpty &&
-          (lower.contains('total') ||
-              lower.contains('amount') ||
-              RegExp(r'\d+\.\d{2}').hasMatch(line))) {
-        final match =
-            RegExp(r'(\d+\.\d{1,2})').firstMatch(line);
-        if (match != null) {
-          priceController.text = match.group(1)!;
-        }
-      }
+      setState(() {
+        AddBody.ocrTextCache = jsonResult;
+        _handledOnce = false; // 🔁 force re-read
+      });
 
-      if (dateController.text.isEmpty) {
-        final match = RegExp(
-          r'(\d{4}[-/]\d{2}[-/]\d{2})',
-        ).firstMatch(line);
-        if (match != null) {
-          dateController.text =
-              match.group(1)!.replaceAll('/', '-');
-        }
-      }
+      _handleIncomingData();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gemini failed: $e')),
+      );
     }
-
-    for (final line in lines) {
-      if (!RegExp(r'\d').hasMatch(line) && line.length > 3) {
-        itemNameController.text = line;
-        break;
-      }
-    }
-
-    if (categoryController.text.isEmpty) {
-      categoryController.text = 'Other';
-    }
-
-    setState(() {});
   }
 
   @override
@@ -205,10 +143,11 @@ class _AddBodyState extends State<AddBody> {
                   color: GlobalColors.textColor3,
                   size: 18,
                 ),
-                onPressed: _scanReceiptFromCamera,
+                onPressed: _openCameraWithAI, // ✅ FIXED
               ),
             ],
           ),
+
           const SizedBox(height: 30),
 
           AppTextField(
@@ -247,50 +186,56 @@ class _AddBodyState extends State<AddBody> {
           ),
           const SizedBox(height: 30),
 
+          /// ✅ ADD EXPENSE (AI + MANUAL)
           AppButton(
             text: 'Add Expense',
-           onPressed: () async {
-  final title = itemNameController.text.trim();
-  final amount = double.tryParse(priceController.text.trim());
-  final category = categoryController.text.trim();
-  final dateText = dateController.text.trim();
-  final notes = noteController.text.trim();
+            onPressed: () async {
+              final title = itemNameController.text.trim();
+              final category = categoryController.text.trim();
+              final dateText = dateController.text.trim();
+              final notes = noteController.text.trim();
+              final amount =
+                  double.tryParse(priceController.text.trim());
 
-  if (title.isEmpty || amount == null || category.isEmpty || dateText.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Please fill all required fields')),
-    );
-    return;
-  }
+              if (title.isEmpty ||
+                  amount == null ||
+                  amount <= 0 ||
+                  category.isEmpty ||
+                  dateText.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Invalid expense data'),
+                  ),
+                );
+                return;
+              }
 
-  try {
-    await VariableExpensesService.addExpense(
-      title: title,
-      amount: amount,
-      category: category,
-      date: DateTime.parse(dateText),
-      notes: notes.isEmpty ? null : notes,
-    );
+              try {
+                await VariableExpensesService.addExpense(
+                  title: title,
+                  amount: amount,
+                  category: category,
+                  date: DateTime.parse(dateText),
+                  notes: notes.isEmpty ? null : notes,
+                );
 
-    itemNameController.clear();
-    priceController.clear();
-    categoryController.clear();
-    dateController.clear();
-    noteController.clear();
+                if (!mounted) return;
 
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Expense added successfully')),
-    );
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(e.toString())),
-    );
-  }
-},
-
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const HomePage(),
+                  ),
+                  (_) => false,
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(e.toString())),
+                );
+              }
+            },
           ),
+
           const SizedBox(height: 20),
         ],
       ),

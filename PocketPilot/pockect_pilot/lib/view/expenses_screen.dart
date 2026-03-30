@@ -12,6 +12,7 @@ class ExpensesScreen extends StatefulWidget {
 class _ExpensesScreenState extends State<ExpensesScreen> {
   List<dynamic> items = [];
   bool loading = true;
+  bool _loadedOnce = false;
 
   @override
   void initState() {
@@ -19,16 +20,34 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     loadExpenses();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    /// 🔥 IMPORTANT:
+    /// This gets called when coming back from another screen
+    if (_loadedOnce && ModalRoute.of(context)?.isCurrent == true) {
+      loadExpenses();
+    }
+
+    _loadedOnce = true;
+  }
+
   Future<void> loadExpenses() async {
+    setState(() => loading = true);
+
     try {
-      final data =
-          await VariableExpensesService.getVariableExpenses();
+      final data = await VariableExpensesService.getVariableExpenses();
+      if (!mounted) return;
+
       setState(() {
         items = data;
         loading = false;
       });
-    } catch (_) {
-      loading = false;
+    } catch (e) {
+      debugPrint("Error loading expenses: $e");
+      if (!mounted) return;
+      setState(() => loading = false);
     }
   }
 
@@ -51,82 +70,108 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
           ),
         ),
       ),
-      body: loading
-          ? const Center(child: CircularProgressIndicator())
-          : items.isEmpty
-              ? Center(
-                  child: Text(
-                    'No Expenses',
-                    style: TextStyle(
-                      color: GlobalColors.textColor,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: items.length,
-                  itemBuilder: (_, index) {
-                    final item = items[index];
+      body: RefreshIndicator(
+        onRefresh: loadExpenses,
+        color: GlobalColors.textColor3,
+        child: loading
+            ? const Center(child: CircularProgressIndicator())
+            : items.isEmpty
+                ? ListView(
+                    children: [
+                      SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.4,
+                      ),
+                      Center(
+                        child: Text(
+                          'No Expenses',
+                          style: TextStyle(
+                            color: GlobalColors.textColor,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: items.length,
+                    itemBuilder: (_, index) {
+                      final item = items[index];
 
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 12,
-                        horizontal: 16,
-                      ),
-                      decoration: BoxDecoration(
-                        color: GlobalColors.textFieldColor,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.arrow_downward,
-                            color: Colors.red,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  item['title'],
-                                  style: TextStyle(
-                                    color:
-                                        GlobalColors.textColor3,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '${item['category']} • ${item['date'].toString().split('T')[0]}',
-                                  style: TextStyle(
-                                    color:
-                                        GlobalColors.textColor,
-                                    fontSize: 9,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Text(
-                            '-\$${item['amount']}',
-                            style: TextStyle(
+                      final title =
+                          item['title']?.toString() ?? 'Unknown';
+                      final category =
+                          item['category']?.toString() ?? 'Other';
+                      final amount =
+                          item['amount']?.toString() ?? '0.00';
+
+                      String date = 'No Date';
+                      if (item['date'] != null) {
+                        date =
+                            item['date'].toString().split('T')[0];
+                      }
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                          horizontal: 16,
+                        ),
+                        decoration: BoxDecoration(
+                          color: GlobalColors.textFieldColor,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.arrow_downward,
                               color: Colors.red,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
+                              size: 18,
                             ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color:
+                                          GlobalColors.textColor3,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '$category • $date',
+                                    style: TextStyle(
+                                      color:
+                                          GlobalColors.textColor,
+                                      fontSize: 9,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Text(
+                              '-\$$amount',
+                              style: const TextStyle(
+                                color: Colors.red,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+      ),
     );
   }
 }
