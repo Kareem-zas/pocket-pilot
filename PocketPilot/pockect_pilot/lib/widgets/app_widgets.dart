@@ -13,7 +13,7 @@ class AppTextField extends StatelessWidget {
   final double fontSize;
 
   const AppTextField({
-    Key? key,
+    super.key,
     required this.controller,
     required this.hint,
     this.obscure = false,
@@ -23,7 +23,7 @@ class AppTextField extends StatelessWidget {
     this.onChanged,
     this.width = 260,
     this.fontSize = 11,
-  }) : super(key: key);
+  });
 
   InputDecoration _decoration() {
     return InputDecoration(
@@ -50,7 +50,7 @@ class AppTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       width: width,
       child: TextField(
         controller: controller,
@@ -73,17 +73,17 @@ class AppButton extends StatelessWidget {
   final double fontSize;
 
   const AppButton({
-    Key? key,
+    super.key,
     required this.text,
     required this.onPressed,
     this.width = 260,
     this.height = 63,
     this.fontSize = 10,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       width: width,
       height: height,
       child: ElevatedButton(

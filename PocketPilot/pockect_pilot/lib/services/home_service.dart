@@ -43,4 +43,29 @@ class HomeService {
       'totalFixed': totalFixed,
     };
   }
+
+  static Future<Map<String, dynamic>> fetchFullDashboard({int? year, int? month}) async {
+    final token = await TokenService.getToken();
+
+    final query = <String, String>{};
+    if (year != null) query['year'] = year.toString();
+    if (month != null) query['month'] = month.toString();
+
+    final uri = Uri.parse(baseUrl).replace(queryParameters: query);
+
+    final response = await http.get(
+      uri,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to load full dashboard');
+    }
+
+    final decoded = jsonDecode(response.body);
+    return decoded['data'] ?? {};
+  }
 }

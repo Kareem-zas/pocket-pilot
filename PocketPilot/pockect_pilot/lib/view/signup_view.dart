@@ -1,113 +1,231 @@
 import 'package:flutter/material.dart';
-import 'package:pockect_pilot/services/auth_service.dart';
-import 'package:pockect_pilot/utils/global_colors.dart';
-import 'package:pockect_pilot/view/moneyInfo_view.dart';
-import 'package:pockect_pilot/widgets/app_widgets.dart';
 
-class SignUpView extends StatefulWidget {
+import 'package:pockect_pilot/view/money_info_view.dart';
+
+import 'package:provider/provider.dart';
+
+import 'signup_provider.dart';
+
+class SignUpView extends StatelessWidget {
   const SignUpView({super.key});
 
-  @override
-  State<SignUpView> createState() => _SignUpViewState();
-}
-
-class _SignUpViewState extends State<SignUpView> {
-  final fullName = TextEditingController();
-  final email = TextEditingController();
-  final phone = TextEditingController();
-  final password = TextEditingController();
-  final confirm = TextEditingController();
-
-  String? error;
-  bool loading = false;
-
-  Future<void> _register() async {
-    if (loading) return;
-
-    setState(() {
-      loading = true;
-      error = null;
-    });
-
-    if (password.text != confirm.text) {
-      setState(() {
-        error = 'Passwords do not match';
-        loading = false;
-      });
-      return;
-    }
-
-    try {
-      await AuthService.register(
-        fullName: fullName.text,
-        email: email.text,
-        password: password.text,
-        phone: phone.text,
-      );
-
-      if (!mounted) return;
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const MoneyInfoView()),
-      );
-    } catch (e) {
-      setState(() {
-        error = e.toString().replaceFirst('Exception: ', '');
-      });
-    }
-
-    setState(() {
-      loading = false;
-    });
+  Widget _input({
+    required String label,
+    required String hint,
+    required IconData icon,
+    required TextEditingController controller,
+    required Function(String) onChanged,
+    bool obscure = false,
+    bool toggle = false,
+    VoidCallback? onToggle,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label.toUpperCase(),
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 6),
+        TextField(
+          controller: controller,
+          obscureText: obscure,
+          onChanged: onChanged,
+          decoration: InputDecoration(
+            hintText: hint,
+            filled: true,
+            fillColor: const Color(0xFFF1F2F6),
+            prefixIcon: Icon(icon),
+            suffixIcon: toggle
+                ? IconButton(
+                    icon: Icon(
+                      obscure ? Icons.visibility_off : Icons.visibility,
+                    ),
+                    onPressed: onToggle,
+                  )
+                : null,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(15),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: GlobalColors.mainColor2,
-      body: Center(
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              Text(
-                'Create Account',
-                style: TextStyle(
-                  color: GlobalColors.textColor3,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 30),
+    return ChangeNotifierProvider(
+      create: (_) => SignUpProvider(),
+      child: Consumer<SignUpProvider>(
+        builder: (context, p, _) {
+          return Scaffold(
+            backgroundColor: const Color(0xFFF3F4F6),
+            body: SafeArea(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 20),
 
-              AppTextField(controller: fullName, hint: 'Full Name'),
-              const SizedBox(height: 12),
-              AppTextField(controller: email, hint: 'Email'),
-              const SizedBox(height: 12),
-              AppTextField(controller: phone, hint: 'Phone'),
-              const SizedBox(height: 12),
-              AppTextField(controller: password, hint: 'Password', obscure: true),
-              const SizedBox(height: 12),
-              AppTextField(controller: confirm, hint: 'Confirm Password', obscure: true),
+                      // HEADER
+                      Row(
+                        children: [
+                          Container(
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: Colors.blue,
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                            child: const Icon(
+                              Icons.explore,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          const Text(
+                            "Pocket Pilot",
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue,
+                            ),
+                          ),
+                        ],
+                      ),
 
-              if (error != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: Text(
-                    error!,
-                    style: const TextStyle(color: Colors.red, fontSize: 10),
+                      const SizedBox(height: 30),
+
+                      const Text(
+                        "Create your account",
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      const Text(
+                        "Your personal financial cockpit starts here.",
+                        style: TextStyle(color: Colors.grey),
+                      ),
+
+                      const SizedBox(height: 30),
+
+                      // CARD
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(25),
+                        ),
+                        child: Column(
+                          children: [
+                            _input(
+                              label: "Name",
+                              hint: "John Doe",
+                              icon: Icons.person,
+                              controller: p.fullName,
+                              onChanged: (_) => p.validate(),
+                            ),
+                            const SizedBox(height: 12),
+
+                            _input(
+                              label: "Email",
+                              hint: "pilot@example.com",
+                              icon: Icons.email,
+                              controller: p.email,
+                              onChanged: (_) => p.validate(),
+                            ),
+                            const SizedBox(height: 12),
+
+                            _input(
+                              label: "Phone",
+                              hint: "+1 (555)",
+                              icon: Icons.phone,
+                              controller: p.phone,
+                              onChanged: (_) {},
+                            ),
+                            const SizedBox(height: 12),
+
+                            _input(
+                              label: "Password",
+                              hint: "••••••",
+                              icon: Icons.lock,
+                              controller: p.password,
+                              obscure: !p.showPassword,
+                              toggle: true,
+                              onToggle: p.togglePassword,
+                              onChanged: (_) => p.validate(),
+                            ),
+                            const SizedBox(height: 12),
+
+                            _input(
+                              label: "Confirm",
+                              hint: "••••••",
+                              icon: Icons.verified_user,
+                              controller: p.confirm,
+                              obscure: !p.showConfirm,
+                              toggle: true,
+                              onToggle: p.toggleConfirm,
+                              onChanged: (_) => p.validate(),
+                            ),
+
+                            if (p.error != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 10),
+                                child: Text(
+                                  p.error!,
+                                  style: const TextStyle(color: Colors.red),
+                                ),
+                              ),
+
+                            const SizedBox(height: 20),
+
+                            GestureDetector(
+                              onTap: () async {
+                                bool success = await p.register();
+                                if (success && context.mounted) {
+                                  Navigator.pushReplacement(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const MoneyInfoView(),
+                                    ),
+                                  );
+                                }
+                              },
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                height: 55,
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  color: p.loading
+                                      ? Colors.blue.shade300
+                                      : Colors.blue,
+                                  borderRadius: BorderRadius.circular(15),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    p.loading ? "Loading..." : "Sign Up →",
+                                    style: const TextStyle(color: Colors.white),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-
-              const SizedBox(height: 30),
-
-              AppButton(
-                text: loading ? 'Loading...' : 'Register',
-                onPressed: _register,
               ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }

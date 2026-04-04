@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:pockect_pilot/services/income_service.dart';
 import 'package:pockect_pilot/view/home_page.dart';
+import 'package:pockect_pilot/services/income_service.dart';
 
-class AddIncomeBody extends StatefulWidget {
-  const AddIncomeBody({super.key});
+class MoneyInfoView extends StatefulWidget {
+  const MoneyInfoView({super.key});
 
   @override
-  State<AddIncomeBody> createState() => _AddIncomeBodyState();
+  State<MoneyInfoView> createState() => _MoneyInfoViewState();
 }
 
-class _AddIncomeBodyState extends State<AddIncomeBody> {
+class _MoneyInfoViewState extends State<MoneyInfoView> {
   final TextEditingController amountController = TextEditingController();
   final TextEditingController sourceController = TextEditingController();
   final TextEditingController notesController = TextEditingController();
@@ -18,16 +18,14 @@ class _AddIncomeBodyState extends State<AddIncomeBody> {
   String? frequency;
   DateTime? selectedDate;
 
-  @override
-  void dispose() {
-    amountController.dispose();
-    sourceController.dispose();
-    notesController.dispose();
-    super.dispose();
-  }
+  final Map<String, String> frequencies = {
+    'Monthly': 'monthly',
+    'Yearly': 'yearly',
+  };
 
-  bool get _isValid {
-    return amountController.text.isNotEmpty && selectedDate != null;
+  bool get _isAmountValid {
+    final text = amountController.text.trim();
+    return text.isNotEmpty && double.tryParse(text) != null;
   }
 
   Future<void> _pickDate() async {
@@ -43,33 +41,52 @@ class _AddIncomeBodyState extends State<AddIncomeBody> {
     }
   }
 
-  Future<void> _addIncome() async {
-    if (!_isValid) return;
+  Future<void> _saveIncome() async {
+    try {
+      if (!_isAmountValid || selectedDate == null) {
+        throw Exception('Please fill required fields');
+      }
 
-    await IncomeService.insertIncome(
-      source: sourceController.text.isEmpty ? 'General' : sourceController.text,
-      amount: double.parse(amountController.text),
-      date: selectedDate!,
-      isRecurring: isRecurring,
-      frequency: isRecurring ? frequency : null,
-      notes: notesController.text.isEmpty ? null : notesController.text,
-    );
+      if (isRecurring && frequency == null) {
+        throw Exception('Please select frequency');
+      }
 
-    if (!mounted) return;
+      await IncomeService.insertIncome(
+        source: sourceController.text.trim().isEmpty
+            ? 'General'
+            : sourceController.text.trim(),
+        amount: double.parse(amountController.text.trim()),
+        date: selectedDate!,
+        isRecurring: isRecurring,
+        frequency: isRecurring ? frequency : null,
+        notes: notesController.text.trim().isEmpty
+            ? null
+            : notesController.text.trim(),
+      );
 
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (_) => const HomePage()),
-      (route) => false,
-    );
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const HomePage()),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.toString())));
+    }
   }
 
   Widget _input(String label, Widget child) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label.toUpperCase(),
-            style: const TextStyle(fontWeight: FontWeight.bold)),
+        Text(
+          label.toUpperCase(),
+          style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1),
+        ),
         const SizedBox(height: 6),
         child,
       ],
@@ -99,37 +116,38 @@ class _AddIncomeBodyState extends State<AddIncomeBody> {
             children: [
               const SizedBox(height: 20),
 
+              // HEADER
               Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                  const SizedBox(width: 10),
-                  const Text("Pocket Pilot",
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: const [
+                  Icon(Icons.menu, color: Colors.blue),
+                  Text("Pocket Pilot",
                       style: TextStyle(
                           color: Colors.blue,
-                          fontWeight: FontWeight.bold)),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18)),
+                  CircleAvatar(radius: 18)
                 ],
               ),
 
               const SizedBox(height: 30),
 
               const Text(
-                "Add Your Income",
-                style: TextStyle(
-                    fontSize: 26, fontWeight: FontWeight.bold),
+                "Welcome to POCKET PILOT",
+                style:
+                    TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
 
-              const SizedBox(height: 10),
+              const SizedBox(height: 6),
 
               const Text(
-                "Track your income to improve insights",
+                "Let's get started by setting your primary income.",
                 style: TextStyle(color: Colors.grey),
               ),
 
               const SizedBox(height: 25),
 
+              // CARD
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
@@ -138,22 +156,25 @@ class _AddIncomeBodyState extends State<AddIncomeBody> {
                 ),
                 child: Column(
                   children: [
+                    // AMOUNT
                     _input(
                       "Primary Income Amount",
                       _box(
                         Row(
                           children: [
                             const Text("\$",
-                                style: TextStyle(color: Colors.blue)),
+                                style: TextStyle(
+                                    color: Colors.blue, fontSize: 20)),
                             const SizedBox(width: 10),
                             Expanded(
                               child: TextField(
                                 controller: amountController,
                                 keyboardType: TextInputType.number,
                                 decoration: const InputDecoration(
-                                  border: InputBorder.none,
                                   hintText: "0.00",
+                                  border: InputBorder.none,
                                 ),
+                                onChanged: (_) => setState(() {}),
                               ),
                             ),
                           ],
@@ -163,21 +184,34 @@ class _AddIncomeBodyState extends State<AddIncomeBody> {
 
                     const SizedBox(height: 15),
 
+                    // TYPE
                     _input(
                       "Income Type",
                       _box(
-                        TextField(
-                          controller: sourceController,
-                          decoration: const InputDecoration(
-                            hintText: "Salary",
-                            border: InputBorder.none,
-                          ),
+                        DropdownButton<String>(
+                          value: sourceController.text.isEmpty
+                              ? "Salary"
+                              : sourceController.text,
+                          underline: const SizedBox(),
+                          isExpanded: true,
+                          items: ["Salary", "Business", "Other"]
+                              .map((e) => DropdownMenuItem(
+                                    value: e,
+                                    child: Text(e),
+                                  ))
+                              .toList(),
+                          onChanged: (val) {
+                            setState(() {
+                              sourceController.text = val!;
+                            });
+                          },
                         ),
                       ),
                     ),
 
                     const SizedBox(height: 15),
 
+                    // DATE
                     _input(
                       "Received Date",
                       GestureDetector(
@@ -187,11 +221,13 @@ class _AddIncomeBodyState extends State<AddIncomeBody> {
                             mainAxisAlignment:
                                 MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(selectedDate == null
-                                  ? "mm/dd/yyyy"
-                                  : selectedDate!
-                                      .toString()
-                                      .split(" ")[0]),
+                              Text(
+                                selectedDate == null
+                                    ? "mm/dd/yyyy"
+                                    : selectedDate!
+                                        .toString()
+                                        .split(" ")[0],
+                              ),
                               const Icon(Icons.calendar_today),
                             ],
                           ),
@@ -201,6 +237,7 @@ class _AddIncomeBodyState extends State<AddIncomeBody> {
 
                     const SizedBox(height: 15),
 
+                    // RECURRING
                     Container(
                       padding: const EdgeInsets.all(15),
                       decoration: BoxDecoration(
@@ -215,7 +252,8 @@ class _AddIncomeBodyState extends State<AddIncomeBody> {
                                   color: Colors.orange),
                               const SizedBox(width: 10),
                               const Expanded(
-                                  child: Text("Is Recurring Income?")),
+                                child: Text("Is Recurring Income?"),
+                              ),
                               Switch(
                                 value: isRecurring,
                                 onChanged: (val) {
@@ -227,34 +265,59 @@ class _AddIncomeBodyState extends State<AddIncomeBody> {
                               ),
                             ],
                           ),
-                          if (isRecurring)
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: GestureDetector(
-                                    onTap: () =>
-                                        setState(() => frequency = "monthly"),
-                                    child: _freqBox("MONTHLY",
-                                        frequency == "monthly"),
+
+                          const SizedBox(height: 10),
+
+                          Row(
+                            children: [
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () => setState(
+                                      () => frequency = "monthly"),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(15),
+                                    decoration: BoxDecoration(
+                                      border: Border.all(
+                                          color: frequency == "monthly"
+                                              ? Colors.blue
+                                              : Colors.grey),
+                                      borderRadius:
+                                          BorderRadius.circular(15),
+                                    ),
+                                    child: const Center(
+                                        child: Text("MONTHLY")),
                                   ),
                                 ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: GestureDetector(
-                                    onTap: () =>
-                                        setState(() => frequency = "yearly"),
-                                    child: _freqBox("YEARLY",
-                                        frequency == "yearly"),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () => setState(
+                                      () => frequency = "yearly"),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(15),
+                                    decoration: BoxDecoration(
+                                      border: Border.all(
+                                          color: frequency == "yearly"
+                                              ? Colors.blue
+                                              : Colors.grey),
+                                      borderRadius:
+                                          BorderRadius.circular(15),
+                                    ),
+                                    child: const Center(
+                                        child: Text("YEARLY")),
                                   ),
                                 ),
-                              ],
-                            )
+                              ),
+                            ],
+                          ),
                         ],
                       ),
                     ),
 
                     const SizedBox(height: 15),
 
+                    // NOTES
                     _input(
                       "Navigator Notes",
                       Container(
@@ -267,7 +330,8 @@ class _AddIncomeBodyState extends State<AddIncomeBody> {
                           controller: notesController,
                           maxLines: 3,
                           decoration: const InputDecoration(
-                            hintText: "Optional notes...",
+                            hintText:
+                                "e.g. Main job salary after tax...",
                             border: InputBorder.none,
                           ),
                         ),
@@ -276,41 +340,28 @@ class _AddIncomeBodyState extends State<AddIncomeBody> {
 
                     const SizedBox(height: 20),
 
+                    // BUTTON
                     SizedBox(
                       width: double.infinity,
                       height: 55,
                       child: ElevatedButton(
-                        onPressed: _isValid ? _addIncome : null,
+                        onPressed: _saveIncome,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.blue,
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(15)),
                         ),
-                        child: const Text("Add Income"),
+                        child: const Text("Complete Setup"),
                       ),
                     ),
                   ],
                 ),
               ),
+
+              const SizedBox(height: 20),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _freqBox(String text, bool active) {
-    return Container(
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        border: Border.all(
-            color: active ? Colors.blue : Colors.grey),
-        borderRadius: BorderRadius.circular(15),
-      ),
-      child: Center(
-        child: Text(text,
-            style: TextStyle(
-                color: active ? Colors.blue : Colors.grey)),
       ),
     );
   }

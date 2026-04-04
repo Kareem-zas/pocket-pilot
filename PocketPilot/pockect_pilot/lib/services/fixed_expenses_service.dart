@@ -46,7 +46,14 @@ class FixedExpensesService {
     }
 
     if (response.statusCode != 200 && response.statusCode != 201) {
-      throw Exception('Failed to add fixed expense');
+      String msg = 'Status ${response.statusCode}: Failed to add fixed expense';
+      try {
+        final data = jsonDecode(response.body);
+        msg = data['message'] ?? msg;
+      } catch (_) {
+        msg = response.body.isNotEmpty ? response.body : msg;
+      }
+      throw Exception(msg);
     }
   }
 

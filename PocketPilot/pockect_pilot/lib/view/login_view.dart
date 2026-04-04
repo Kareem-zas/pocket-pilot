@@ -1,10 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:pockect_pilot/utils/global_colors.dart';
 import 'package:pockect_pilot/view/signup_view.dart';
 import 'package:pockect_pilot/view/home_page.dart';
-import 'package:pockect_pilot/widgets/app_widgets.dart';
 import 'package:pockect_pilot/services/token_service.dart';
 
 class LoginView extends StatefulWidget {
@@ -20,6 +18,7 @@ class _LoginViewState extends State<LoginView> {
 
   String? emailError;
   String? passwordError;
+
   bool _obscurePassword = true;
   bool _loading = false;
 
@@ -34,15 +33,13 @@ class _LoginViewState extends State<LoginView> {
 
   Widget _errorText(String? err) {
     if (err == null) return const SizedBox.shrink();
-    return Container(
-      width: 260,
-      padding: const EdgeInsets.only(top: 6),
-      alignment: Alignment.centerLeft,
+    return Padding(
+      padding: const EdgeInsets.only(top: 5),
       child: Text(
         err,
         style: const TextStyle(
           color: Colors.red,
-          fontSize: 9,
+          fontSize: 11,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -80,9 +77,7 @@ class _LoginViewState extends State<LoginView> {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/auth/login'),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'email': email,
           'password': password,
@@ -108,13 +103,12 @@ class _LoginViewState extends State<LoginView> {
       Navigator.pushReplacement(
         context,
         PageRouteBuilder(
-  transitionDuration: const Duration(milliseconds: 300),
-  pageBuilder: (_, __, ___) => const HomePage(),
-  transitionsBuilder: (_, animation, __, child) {
-    return FadeTransition(opacity: animation, child: child);
-  },
-),
-
+          transitionDuration: const Duration(milliseconds: 300),
+          pageBuilder: (_, _, _) => const HomePage(),
+          transitionsBuilder: (_, animation, _, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -125,90 +119,229 @@ class _LoginViewState extends State<LoginView> {
     }
   }
 
+  Widget _socialButton(String text, IconData icon) {
+    return Container(
+      height: 50,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F2F6),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 22),
+          const SizedBox(width: 10),
+          Text(
+            text,
+            style: const TextStyle(
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: GlobalColors.mainColor2,
-      body: SingleChildScrollView(
-        child: SafeArea(
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.only(top: 50),
+      backgroundColor: const Color(0xFFF3F4F6),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Column(
               children: [
-                Text(
-                  'Welcome Back!',
+                const SizedBox(height: 40),
+
+                // ICON
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: Colors.blue,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Icon(Icons.flight,
+                      color: Colors.white, size: 40),
+                ),
+
+                const SizedBox(height: 20),
+
+                const Text(
+                  "Log In",
                   style: TextStyle(
-                    color: GlobalColors.textColor3,
-                    fontSize: 13,
+                    fontSize: 28,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+
                 const SizedBox(height: 6),
-                Text(
-                  'Please sign in to your account',
-                  style: TextStyle(
-                    color: GlobalColors.buttonColor,
-                    fontSize: 7,
-                    fontWeight: FontWeight.bold,
+
+                const Text(
+                  "Welcome back, Captain. Check your flight path.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey),
+                ),
+
+                const SizedBox(height: 30),
+
+                // CARD
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(25),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: 15,
+                        offset: Offset(0, 5),
+                      )
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "EMAIL ADDRESS",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+
+                      TextField(
+                        controller: emailController,
+                        onChanged: (_) =>
+                            setState(() => emailError = null),
+                        decoration: InputDecoration(
+                          hintText: "name@company.com",
+                          filled: true,
+                          fillColor: const Color(0xFFF1F2F6),
+                          prefixIcon:
+                              const Icon(Icons.email_outlined),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(15),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                      _errorText(emailError),
+
+                      const SizedBox(height: 15),
+
+                      Row(
+                        mainAxisAlignment:
+                            MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            "PASSWORD",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () {},
+                            child: const Text(
+                              "Forgot Password?",
+                              style: TextStyle(
+                                color: Colors.blue,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+
+                      TextField(
+                        controller: passwordController,
+                        obscureText: _obscurePassword,
+                        onChanged: (_) =>
+                            setState(() => passwordError = null),
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: const Color(0xFFF1F2F6),
+                          prefixIcon:
+                              const Icon(Icons.lock_outline),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscurePassword =
+                                    !_obscurePassword;
+                              });
+                            },
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(15),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                      _errorText(passwordError),
+
+                      const SizedBox(height: 20),
+
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed:
+                              _loading ? null : _onLoginPressed,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.circular(15),
+                            ),
+                          ),
+                          child: Text(
+                            _loading
+                                ? "Signing In..."
+                                : "Log In",
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 90),
 
-                AppTextField(
-                  controller: emailController,
-                  hint: "Email",
-                  keyboardType: TextInputType.emailAddress,
-                  onChanged: (_) => setState(() => emailError = null),
-                ),
-                _errorText(emailError),
+                const SizedBox(height: 20),
 
-                const SizedBox(height: 12),
-
-                AppTextField(
-                  controller: passwordController,
-                  hint: "Password",
-                  obscure: _obscurePassword,
-                  onChanged: (_) => setState(() => passwordError = null),
-                  suffix: IconButton(
-                    icon: Icon(
-                      _obscurePassword
-                          ? Icons.visibility_off
-                          : Icons.visibility,
-                      color: GlobalColors.textColor,
-                      size: 18,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        _obscurePassword = !_obscurePassword;
-                      });
-                    },
-                  ),
-                ),
-                _errorText(passwordError),
-
-                const SizedBox(height: 100),
-
-                AppButton(
-                  text: _loading ? "Signing In..." : "Sign In",
-                  onPressed: () {
-                    if (_loading) return;
-                    _onLoginPressed();
-                  },
+                const Text(
+                  "OR CONTINUE WITH",
+                  style: TextStyle(color: Colors.grey),
                 ),
 
                 const SizedBox(height: 15),
 
                 Row(
+                  children: [
+                    Expanded(
+                      child:
+                          _socialButton("Google", Icons.g_mobiledata),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _socialButton("Apple", Icons.apple),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 20),
+
+                Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      "Don't Have An Account ? ",
-                      style: TextStyle(
-                        color: GlobalColors.textColor3,
-                        fontSize: 14,
-                      ),
-                    ),
+                    const Text("Don’t have an account? "),
                     GestureDetector(
                       onTap: () {
                         Navigator.push(
@@ -218,11 +351,10 @@ class _LoginViewState extends State<LoginView> {
                           ),
                         );
                       },
-                      child: Text(
-                        " Sign Up",
+                      child: const Text(
+                        "Sign Up",
                         style: TextStyle(
-                          color: GlobalColors.buttonColor,
-                          fontSize: 14,
+                          color: Colors.blue,
                           fontWeight: FontWeight.bold,
                         ),
                       ),

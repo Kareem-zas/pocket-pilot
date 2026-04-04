@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 
 class GeminiReceiptService {
-  static const String _apiKey = 'AIzaSyCLmn_kQ-p2purSvh3uiNla_kjyGQFfsz0';
+  static const String _apiKey = '[GCP_API_KEY]';
 
   static Future<String> analyzeReceipt(File image) async {
     final bytes = await image.readAsBytes();
@@ -17,33 +17,24 @@ class GeminiReceiptService {
 
     final response = await http.post(
       uri,
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         "contents": [
           {
             "role": "user",
             "parts": [
+              {"text": _prompt},
               {
-                "text": _prompt,
+                "inline_data": {"mime_type": "image/jpeg", "data": base64Image},
               },
-              {
-                "inline_data": {
-                  "mime_type": "image/jpeg",
-                  "data": base64Image,
-                }
-              }
-            ]
-          }
-        ]
+            ],
+          },
+        ],
       }),
     );
 
     if (response.statusCode != 200) {
-      throw Exception(
-        'Gemini error ${response.statusCode}: ${response.body}',
-      );
+      throw Exception('Gemini error ${response.statusCode}: ${response.body}');
     }
 
     final decoded = jsonDecode(response.body);
