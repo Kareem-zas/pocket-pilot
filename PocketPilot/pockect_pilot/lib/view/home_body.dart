@@ -9,6 +9,10 @@ import 'package:image_picker/image_picker.dart';
 import 'package:pockect_pilot/services/gemini_receipt_service.dart';
 import 'package:pockect_pilot/view/goals_page.dart';
 import 'package:pockect_pilot/view/add_goal_page.dart';
+import 'package:pockect_pilot/services/pocket_service.dart';
+import 'package:pockect_pilot/services/bank_sms_service.dart';
+import 'package:pockect_pilot/services/token_service.dart';
+import 'package:pockect_pilot/view/login_view.dart';
 
 class HomeBody extends StatefulWidget {
   const HomeBody({super.key});
@@ -23,6 +27,7 @@ class _HomeBodyState extends State<HomeBody>
   double totalIncome = 0;
   double variableExpenses = 0;
   double totalFixed = 0;
+  double pocketCash = 0;
   List incomes = [];
   List expenses = [];
   bool loading = true;
@@ -53,10 +58,12 @@ class _HomeBodyState extends State<HomeBody>
       final dashboard = await HomeService.fetchDashboard();
       final incomeList = await IncomeService.getIncome();
       final expenseList = await VariableExpensesService.getVariableExpenses();
+      final cashLocal = await PocketService.getPocketBalance();
 
       if (!mounted) return;
 
       setState(() {
+        pocketCash = cashLocal;
         balance = dashboard['balance'] ?? 0;
         totalIncome = dashboard['totalIncome'] ?? 0;
         variableExpenses = dashboard['variableExpenses'] ?? 0;
@@ -66,7 +73,60 @@ class _HomeBodyState extends State<HomeBody>
         loading = false;
       });
     } catch (e) {
-      loading = false;
+      if (mounted) setState(() => loading = false);
+      
+      final err = e.toString().toLowerCase();
+      if (err.contains("token") || err.contains("jwt") || err.contains("unauthorized")) {
+        await TokenService.clearToken();
+        if (mounted) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => const LoginView()),
+            (route) => false,
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _syncSMS() async {
+    try {
+      final msgs = await BankSmsService.fetchRecentBankMessages();
+      if (msgs.isNotEmpty && mounted) {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: Colors.white,
+            title: const Text("Bank Messages Found"),
+            content: Text("Detected ${msgs.length} recent transactions. Process any ATM withdrawals into your Pocket Money?"),
+            actions: [
+               TextButton(onPressed:() => Navigator.pop(ctx), child: const Text("Cancel")),
+               ElevatedButton(
+                 style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+                 onPressed: () async {
+                   double totalCashAdded = 0;
+                   for(var msg in msgs) {
+                      if(msg['type'] == 'expense' || msg['body'].toString().toLowerCase().contains('withdraw')) {
+                          totalCashAdded += msg['amount'];
+                      }
+                   }
+                   await PocketService.addPocketCash(totalCashAdded);
+                    if (!ctx.mounted) return;
+                    Navigator.pop(ctx);
+                    if (!mounted) return;
+                   loadDashboard();
+                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Transferred \$${totalCashAdded.toStringAsFixed(2)} to Pocket Cash!")));
+                 }, 
+                 child: const Text("Sync to Pocket", style: TextStyle(color: Colors.white))
+               )
+            ]
+          )
+        );
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("No new bank messages.")));
+      }
+    } catch(e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
 
@@ -123,6 +183,10 @@ class _HomeBodyState extends State<HomeBody>
               ),
               Row(
                 children: [
+                  IconButton(
+                    icon: const Icon(Icons.sync_outlined, color: Colors.blue),
+                    onPressed: _syncSMS,
+                  ),
                   IconButton(
                     icon: const Icon(Icons.camera_alt, color: Colors.blue),
                     onPressed: _quickScan,
@@ -212,13 +276,15 @@ class _HomeBodyState extends State<HomeBody>
                               ),
                             ],
                           ),
-                          Row(
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              Container(width: 25, height: 25, decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.8), shape: BoxShape.circle)),
-                              Transform.translate(
-                                offset: const Offset(-10, 0),
-                                child: Container(width: 25, height: 25, decoration: BoxDecoration(color: Colors.orange.withValues(alpha: 0.8), shape: BoxShape.circle)),
-                              )
+                              const Text("POCKET MONEY 💵", style: TextStyle(color: Colors.greenAccent, fontSize: 10, fontWeight: FontWeight.w800)),
+                              const SizedBox(height: 5),
+                              Text(
+                                "\$${pocketCash.toStringAsFixed(2)}",
+                                style: const TextStyle(fontSize: 18, color: Colors.greenAccent, fontWeight: FontWeight.bold),
+                              ),
                             ],
                           )
                         ],

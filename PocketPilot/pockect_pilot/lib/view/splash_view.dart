@@ -4,6 +4,7 @@ import 'package:pockect_pilot/services/token_service.dart';
 import 'package:pockect_pilot/utils/global_colors.dart';
 import 'package:pockect_pilot/view/home_page.dart';
 import 'package:pockect_pilot/view/login_view.dart';
+import 'package:pockect_pilot/services/userprofile_service.dart';
 
 class SplashView extends StatefulWidget {
   const SplashView({super.key});
@@ -21,7 +22,24 @@ class _SplashViewState extends State<SplashView> {
   }
 
   Future<void> _start() async {
-    final token = await TokenService.getToken();
+    bool isTokenValid = false;
+
+    await Future.wait([
+      Future.delayed(const Duration(seconds: 2)),
+      () async {
+        final token = await TokenService.getToken();
+        if (token != null) {
+          try {
+            await UserService.getProfile();
+            isTokenValid = true;
+          } catch (e) {
+            if (e.toString().toLowerCase().contains('token')) {
+              await TokenService.clearToken();
+            }
+          }
+        }
+      }(),
+    ]);
 
     if (!mounted) return;
 
@@ -30,7 +48,7 @@ class _SplashViewState extends State<SplashView> {
       PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 400),
         pageBuilder: (_, _, _) =>
-            token != null ? const HomePage() : const LoginView(),
+            isTokenValid ? const HomePage() : const LoginView(),
         transitionsBuilder: (_, animation, _, child) {
           return FadeTransition(
             opacity: animation,

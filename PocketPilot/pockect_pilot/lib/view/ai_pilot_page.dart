@@ -4,7 +4,8 @@ import 'package:pockect_pilot/services/home_service.dart';
 import 'dart:async';
 
 class AiPilotPage extends StatefulWidget {
-  const AiPilotPage({super.key});
+  final String? initialPrompt;
+  const AiPilotPage({super.key, this.initialPrompt});
 
   @override
   State<AiPilotPage> createState() => _AiPilotPageState();
@@ -22,6 +23,9 @@ class _AiPilotPageState extends State<AiPilotPage> {
   void initState() {
     super.initState();
     _loadContext();
+    if (widget.initialPrompt != null) {
+      _controller.text = widget.initialPrompt!;
+    }
     // Default welcome message
     messages.add({
       "role": "model",
@@ -160,6 +164,13 @@ class _AiPilotPageState extends State<AiPilotPage> {
       padding: const EdgeInsets.all(20),
       child: Row(
         children: [
+          IconButton(
+            icon: const Icon(Icons.arrow_back_ios, color: Colors.black87, size: 20),
+            onPressed: () => Navigator.pop(context),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
+          const SizedBox(width: 15),
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
