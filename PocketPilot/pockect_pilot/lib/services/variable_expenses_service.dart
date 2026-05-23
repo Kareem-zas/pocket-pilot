@@ -66,4 +66,35 @@ class VariableExpensesService {
     final data = jsonDecode(response.body);
     return data['data']['summary']['expenses']['variable']['details'] ?? [];
   }
+
+  // ✅ SYNC SMS EXPENSES
+  static Future<int> syncSmsExpenses(List<Map<String, dynamic>> transactions) async {
+    final token = await TokenService.getToken();
+
+    // Ensure dates are stringified for JSON encoding
+    final encodedTransactions = transactions.map((t) {
+      final copy = Map<String, dynamic>.from(t);
+      if (copy['date'] is DateTime) {
+        copy['date'] = (copy['date'] as DateTime).toIso8601String();
+      }
+      return copy;
+    }).toList();
+
+    final response = await http.post(
+      Uri.parse('$baseUrl/sms-sync'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({'transactions': encodedTransactions}),
+    );
+
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      final data = jsonDecode(response.body);
+      throw Exception(data['message'] ?? 'Failed to sync SMS transactions');
+    }
+
+    final data = jsonDecode(response.body);
+    return data['data']['addedCount'] ?? 0;
+  }
 }

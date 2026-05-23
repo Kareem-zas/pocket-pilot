@@ -1,8 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'dart:async';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pockect_pilot/view/signup_view.dart';
 import 'package:pockect_pilot/view/home_page.dart';
+import 'package:pockect_pilot/view/forgot_password_page.dart';
 import 'package:pockect_pilot/services/token_service.dart';
 
 class LoginView extends StatefulWidget {
@@ -22,13 +25,96 @@ class _LoginViewState extends State<LoginView> {
   bool _obscurePassword = true;
   bool _loading = false;
 
+  int _failedAttempts = 0;
+  DateTime? _lockoutUntil;
+  Timer? _lockoutTimer;
+  int _remainingSeconds = 0;
+
   static const String baseUrl = 'http://localhost:8000/api';
 
   @override
+  void initState() {
+    super.initState();
+    _checkLockout();
+  }
+
+  @override
   void dispose() {
+    _lockoutTimer?.cancel();
     emailController.dispose();
     passwordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _checkLockout() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lockoutTimeStr = prefs.getString('lockout_until');
+    if (lockoutTimeStr != null) {
+      final lockoutTime = DateTime.parse(lockoutTimeStr);
+      if (lockoutTime.isAfter(DateTime.now())) {
+        setState(() {
+          _lockoutUntil = lockoutTime;
+          _failedAttempts = 5;
+        });
+        _startLockoutTimer();
+      } else {
+        await prefs.remove('lockout_until');
+      }
+    }
+  }
+
+  void _startLockoutTimer() {
+    _lockoutTimer?.cancel();
+    if (_lockoutUntil == null) return;
+
+    final difference = _lockoutUntil!.difference(DateTime.now()).inSeconds;
+    if (difference <= 0) {
+      _endLockout();
+      return;
+    }
+
+    setState(() {
+      _remainingSeconds = difference;
+    });
+
+    _lockoutTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      final diff = _lockoutUntil!.difference(DateTime.now()).inSeconds;
+      if (diff <= 0) {
+        timer.cancel();
+        _endLockout();
+      } else {
+        setState(() {
+          _remainingSeconds = diff;
+        });
+      }
+    });
+  }
+
+  Future<void> _endLockout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('lockout_until');
+    setState(() {
+      _lockoutUntil = null;
+      _failedAttempts = 0;
+      _remainingSeconds = 0;
+    });
+  }
+
+  Future<void> _registerFailedAttempt() async {
+    setState(() {
+      _failedAttempts++;
+    });
+
+    if (_failedAttempts >= 5) {
+      final lockoutUntil = DateTime.now().add(const Duration(seconds: 30));
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('lockout_until', lockoutUntil.toIso8601String());
+
+      setState(() {
+        _lockoutUntil = lockoutUntil;
+      });
+      _startLockoutTimer();
+    }
   }
 
   Widget _errorText(String? err) {
@@ -47,6 +133,16 @@ class _LoginViewState extends State<LoginView> {
   }
 
   Future<void> _onLoginPressed() async {
+    if (_lockoutUntil != null && _lockoutUntil!.isAfter(DateTime.now())) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Too many failed attempts. Try again in $_remainingSeconds seconds."),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
     setState(() {
       emailError = null;
       passwordError = null;
@@ -95,6 +191,10 @@ class _LoginViewState extends State<LoginView> {
         throw Exception(data['message'] ?? 'Login failed');
       }
 
+      // Reset lockout and failed attempts on success
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('lockout_until');
+
       final token = data['token'];
       await TokenService.saveToken(token);
 
@@ -111,30 +211,38 @@ class _LoginViewState extends State<LoginView> {
         ),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
+      await _registerFailedAttempt();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceFirst("Exception: ", "")),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
   Widget _socialButton(String text, IconData icon) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       height: 50,
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F2F6),
+        color: isDark ? const Color(0xFF334155) : const Color(0xFFF1F2F6),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 22),
+          Icon(icon, size: 22, color: isDark ? Colors.white70 : Colors.black87),
           const SizedBox(width: 10),
           Text(
             text,
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.w500,
+              color: isDark ? Colors.white : Colors.black87,
             ),
           ),
         ],
@@ -144,8 +252,9 @@ class _LoginViewState extends State<LoginView> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F4F6),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
@@ -168,20 +277,21 @@ class _LoginViewState extends State<LoginView> {
 
                 const SizedBox(height: 20),
 
-                const Text(
+                Text(
                   "Log In",
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : Colors.black87,
                   ),
                 ),
 
                 const SizedBox(height: 6),
 
-                const Text(
+                Text(
                   "Welcome back, Captain. Check your flight path.",
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey),
+                  style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey),
                 ),
 
                 const SizedBox(height: 30),
@@ -190,24 +300,25 @@ class _LoginViewState extends State<LoginView> {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).cardColor,
                     borderRadius: BorderRadius.circular(25),
-                    boxShadow: const [
+                    boxShadow: [
                       BoxShadow(
-                        color: Colors.black12,
+                        color: isDark ? Colors.black.withOpacity(0.3) : Colors.black12,
                         blurRadius: 15,
-                        offset: Offset(0, 5),
+                        offset: const Offset(0, 5),
                       )
                     ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         "EMAIL ADDRESS",
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
+                          color: isDark ? Colors.white70 : Colors.black87,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -216,12 +327,14 @@ class _LoginViewState extends State<LoginView> {
                         controller: emailController,
                         onChanged: (_) =>
                             setState(() => emailError = null),
+                        style: TextStyle(color: isDark ? Colors.white : Colors.black87),
                         decoration: InputDecoration(
                           hintText: "name@company.com",
+                          hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.black38),
                           filled: true,
-                          fillColor: const Color(0xFFF1F2F6),
+                          fillColor: isDark ? const Color(0xFF334155) : const Color(0xFFF1F2F6),
                           prefixIcon:
-                              const Icon(Icons.email_outlined),
+                              Icon(Icons.email_outlined, color: isDark ? Colors.white70 : Colors.black54),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(15),
                             borderSide: BorderSide.none,
@@ -236,15 +349,23 @@ class _LoginViewState extends State<LoginView> {
                         mainAxisAlignment:
                             MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
+                          Text(
                             "PASSWORD",
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 12,
+                              color: isDark ? Colors.white70 : Colors.black87,
                             ),
                           ),
-                          GestureDetector(
-                            onTap: () {},
+                           GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const ForgotPasswordPage(),
+                                ),
+                              );
+                            },
                             child: const Text(
                               "Forgot Password?",
                               style: TextStyle(
@@ -262,16 +383,18 @@ class _LoginViewState extends State<LoginView> {
                         obscureText: _obscurePassword,
                         onChanged: (_) =>
                             setState(() => passwordError = null),
+                        style: TextStyle(color: isDark ? Colors.white : Colors.black87),
                         decoration: InputDecoration(
                           filled: true,
-                          fillColor: const Color(0xFFF1F2F6),
+                          fillColor: isDark ? const Color(0xFF334155) : const Color(0xFFF1F2F6),
                           prefixIcon:
-                              const Icon(Icons.lock_outline),
+                              Icon(Icons.lock_outline, color: isDark ? Colors.white70 : Colors.black54),
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscurePassword
                                   ? Icons.visibility_off
                                   : Icons.visibility,
+                              color: isDark ? Colors.white70 : Colors.black54,
                             ),
                             onPressed: () {
                               setState(() {
@@ -295,18 +418,25 @@ class _LoginViewState extends State<LoginView> {
                         height: 50,
                         child: ElevatedButton(
                           onPressed:
-                              _loading ? null : _onLoginPressed,
+                              (_loading || _lockoutUntil != null) ? null : _onLoginPressed,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
+                            backgroundColor: const Color(0xFF1D9E75),
+                            foregroundColor: Colors.white,
+                            disabledBackgroundColor: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
                             shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(15),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                           ),
                           child: Text(
-                            _loading
-                                ? "Signing In..."
-                                : "Log In",
+                            _lockoutUntil != null
+                                ? "Locked out (${_remainingSeconds}s)"
+                                : (_loading ? "Signing In..." : "Log In"),
+                            style: TextStyle(
+                              color: _lockoutUntil != null
+                                  ? (isDark ? Colors.white38 : Colors.black38)
+                                  : Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),
@@ -316,9 +446,9 @@ class _LoginViewState extends State<LoginView> {
 
                 const SizedBox(height: 20),
 
-                const Text(
+                Text(
                   "OR CONTINUE WITH",
-                  style: TextStyle(color: Colors.grey),
+                  style: TextStyle(color: isDark ? Colors.white54 : Colors.grey),
                 ),
 
                 const SizedBox(height: 15),
@@ -341,7 +471,7 @@ class _LoginViewState extends State<LoginView> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text("Don’t have an account? "),
+                    Text("Don’t have an account? ", style: TextStyle(color: isDark ? Colors.white70 : Colors.black87)),
                     GestureDetector(
                       onTap: () {
                         Navigator.push(

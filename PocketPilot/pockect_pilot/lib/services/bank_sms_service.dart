@@ -32,19 +32,13 @@ class BankSmsService {
       for (var msg in messages) {
         String body = msg.body?.toLowerCase() ?? '';
         
-        // Define trigger keywords for expenses/withdrawals
-        bool isExpense = body.contains('purchase') || 
-                         body.contains('deducted') || 
-                         body.contains('withdrawn') ||
-                         body.contains('payment');
-                         
-        // Trigger keywords for deposits
-        bool isDeposit = body.contains('deposited') || 
-                         body.contains('credited') || 
-                         body.contains('refunded');
+        // Define trigger keywords for three categories
+        bool isPurchase = body.contains('purchase') || body.contains('payment') || body.contains('pos') || body.contains('deducted');
+        bool isWithdrawal = body.contains('withdrawn') || body.contains('atm') || body.contains('cash');
+        bool isDeposit = body.contains('deposited') || body.contains('credited') || body.contains('refunded') || body.contains('salary');
 
         // Only process financial SMS messages
-        if (isExpense || isDeposit) {
+        if (isPurchase || isWithdrawal || isDeposit) {
           // Attempt to extract the amount using a basic currency Regex
           // Matches formatted numbers like 150.00, 150, 1,500.50
           RegExp amountRegex = RegExp(r'(?:sar|usd|\$|aed|egp|rs|amount:?)?\s?((?:\d{1,3}(?:,\d{3})*|\d+)(?:\.\d{1,2})?)', caseSensitive: false);
@@ -55,11 +49,20 @@ class BankSmsService {
             double amount = double.tryParse(extractedAmountStr) ?? 0.0;
             
             if (amount > 0) {
+              String txType = 'unknown';
+              if (isWithdrawal) {
+                txType = 'withdrawal';
+              } else if (isPurchase) {
+                txType = 'purchase';
+              } else if (isDeposit) {
+                txType = 'deposit';
+              }
+
               parsedTransactions.add({
                 'id': msg.id.toString(),
                 'sender': msg.address,
                 'amount': amount,
-                'type': isExpense ? 'expense' : 'income',
+                'type': txType,
                 'date': msg.date,
                 'body': msg.body,
               });

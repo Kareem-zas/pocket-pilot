@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:pockect_pilot/services/variable_expenses_service.dart';
 import 'package:pockect_pilot/services/gemini_receipt_service.dart';
 import 'package:pockect_pilot/view/home_page.dart';
+import 'package:pockect_pilot/view/receipt_confirmation_page.dart';
 
 class AddBody extends StatefulWidget {
   static String? ocrTextCache;
@@ -73,12 +74,10 @@ class _AddBodyState extends State<AddBody> {
       if (!mounted) return;
       Navigator.pop(context);
 
-      setState(() {
-        AddBody.ocrTextCache = result;
-        _handledOnce = false;
-      });
-
-      _handleIncomingData();
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => ReceiptConfirmationPage(rawJson: result)),
+      );
     } catch (e) {
       if (!mounted) return;
       Navigator.pop(context);
@@ -105,8 +104,9 @@ class _AddBodyState extends State<AddBody> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F4F6),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
@@ -117,19 +117,19 @@ class _AddBodyState extends State<AddBody> {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.arrow_back),
+                    icon: Icon(Icons.arrow_back, color: isDark ? Colors.white70 : Colors.black87),
                   ),
                   const Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.camera_alt),
+                    icon: Icon(Icons.camera_alt, color: isDark ? Colors.blue[300] : Colors.blue),
                     onPressed: _openCameraWithAI,
                   ),
                 ],
               ),
 
-              const Text(
+              Text(
                 "New Expense",
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black),
               ),
 
               const SizedBox(height: 15),
@@ -137,14 +137,14 @@ class _AddBodyState extends State<AddBody> {
               Container(
                 padding: const EdgeInsets.all(5),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE5E7EB),
+                  color: isDark ? const Color(0xFF334155) : const Color(0xFFE5E7EB),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
                   children: [
-                    _tab("Manual Entry", 0),
-                    _tab("Camera Scan", 1),
-                    _tab("SMS Reader", 2),
+                    _tab(context, "Manual Entry", 0),
+                    _tab(context, "Camera Scan", 1),
+                    _tab(context, "SMS Reader", 2),
                   ],
                 ),
               ),
@@ -167,7 +167,8 @@ class _AddBodyState extends State<AddBody> {
     );
   }
 
-  Widget _tab(String text, int index) {
+  Widget _tab(BuildContext context, String text, int index) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final selected = selectedTab == index;
     return Expanded(
       child: GestureDetector(
@@ -175,13 +176,13 @@ class _AddBodyState extends State<AddBody> {
         child: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: selected ? Colors.white : Colors.transparent,
+            color: selected ? (isDark ? const Color(0xFF1E293B) : Colors.white) : Colors.transparent,
             borderRadius: BorderRadius.circular(15),
           ),
           child: Center(
             child: Text(
               text,
-              style: TextStyle(color: selected ? Colors.blue : Colors.black),
+              style: TextStyle(color: selected ? (isDark ? Colors.blue[300] : Colors.blue) : (isDark ? Colors.white70 : Colors.black), fontWeight: selected ? FontWeight.bold : FontWeight.normal),
             ),
           ),
         ),
@@ -193,7 +194,7 @@ class _AddBodyState extends State<AddBody> {
     return Container(
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(25),
       ),
       child: Column(
@@ -288,43 +289,52 @@ class _AddBodyState extends State<AddBody> {
     );
   }
 
-  Widget _camera() => GestureDetector(
-    onTap: _openCameraWithAI,
-    child: Container(
-      height: 120,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(25),
-      ),
-      child: const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.camera_alt, size: 40, color: Colors.blue),
-            SizedBox(height: 10),
-            Text("Tap to scan your receipt", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
-          ],
+  Widget _camera() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return GestureDetector(
+      onTap: _openCameraWithAI,
+      child: Container(
+        height: 120,
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(25),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.camera_alt, size: 40, color: isDark ? Colors.blue[300] : Colors.blue),
+              const SizedBox(height: 10),
+              Text("Tap to scan your receipt", style: TextStyle(color: isDark ? Colors.white60 : Colors.grey, fontWeight: FontWeight.bold)),
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 
-  Widget _sms() => Container(
-    height: 100,
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(25),
-    ),
-    child: const Center(child: Text("SMS Reader")),
-  );
+  Widget _sms() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      height: 100,
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(25),
+      ),
+      child: Center(child: Text("SMS Reader", style: TextStyle(color: isDark ? Colors.white70 : Colors.black87, fontWeight: FontWeight.bold))),
+    );
+  }
 
   Widget _input(TextEditingController controller, String hint) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return TextField(
       controller: controller,
+      style: TextStyle(color: isDark ? Colors.white : Colors.black87),
       decoration: InputDecoration(
         hintText: hint,
+        hintStyle: TextStyle(color: isDark ? Colors.grey.shade400 : Colors.grey),
         filled: true,
-        fillColor: const Color(0xFFF1F2F6),
+        fillColor: isDark ? const Color(0xFF334155) : const Color(0xFFF1F2F6),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(15),
           borderSide: BorderSide.none,

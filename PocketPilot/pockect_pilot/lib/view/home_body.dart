@@ -13,6 +13,11 @@ import 'package:pockect_pilot/services/pocket_service.dart';
 import 'package:pockect_pilot/services/bank_sms_service.dart';
 import 'package:pockect_pilot/services/token_service.dart';
 import 'package:pockect_pilot/view/login_view.dart';
+import 'package:pockect_pilot/view/receipt_confirmation_page.dart';
+import 'package:pockect_pilot/services/gamification_service.dart';
+import 'package:pockect_pilot/view/gamification_screen.dart';
+import 'package:pockect_pilot/services/goals_service.dart';
+import 'package:pockect_pilot/view/shared_goals_page.dart';
 
 class HomeBody extends StatefulWidget {
   const HomeBody({super.key});
@@ -30,6 +35,8 @@ class _HomeBodyState extends State<HomeBody>
   double pocketCash = 0;
   List incomes = [];
   List expenses = [];
+  int streak = 0;
+  Map<String, dynamic>? latestGoal;
   bool loading = true;
 
   late AnimationController _controller;
@@ -60,6 +67,25 @@ class _HomeBodyState extends State<HomeBody>
       final expenseList = await VariableExpensesService.getVariableExpenses();
       final cashLocal = await PocketService.getPocketBalance();
 
+      int currentStreak = 0;
+      try {
+        final gamification = await GamificationService.getStatus();
+        currentStreak = gamification['streak'] ?? 0;
+      } catch (e) {
+        print("Error loading gamification streak: $e");
+      }
+
+      Map<String, dynamic>? activeGoal;
+      try {
+        final goalsData = await GoalsService.getGoals();
+        final List goalsList = goalsData['goals'] ?? [];
+        if (goalsList.isNotEmpty) {
+          activeGoal = goalsList.first;
+        }
+      } catch (e) {
+        print("Error loading goals: $e");
+      }
+
       if (!mounted) return;
 
       setState(() {
@@ -70,6 +96,8 @@ class _HomeBodyState extends State<HomeBody>
         totalFixed = dashboard['totalFixed'] ?? 0;
         incomes = incomeList;
         expenses = expenseList;
+        streak = currentStreak;
+        latestGoal = activeGoal;
         loading = false;
       });
     } catch (e) {
@@ -106,16 +134,21 @@ class _HomeBodyState extends State<HomeBody>
                  onPressed: () async {
                    double totalCashAdded = 0;
                    for(var msg in msgs) {
-                      if(msg['type'] == 'expense' || msg['body'].toString().toLowerCase().contains('withdraw')) {
+                      if(msg['type'] == 'withdrawal') {
                           totalCashAdded += msg['amount'];
                       }
                    }
+                   
+                   // Sync to backend APIs (they filter internally by type: purchase and deposit)
+                   int syncedExpCount = await VariableExpensesService.syncSmsExpenses(msgs);
+                   int syncedIncCount = await IncomeService.syncSmsIncome(msgs);
+                   
                    await PocketService.addPocketCash(totalCashAdded);
                     if (!ctx.mounted) return;
                     Navigator.pop(ctx);
                     if (!mounted) return;
                    loadDashboard();
-                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Transferred \$${totalCashAdded.toStringAsFixed(2)} to Pocket Cash!")));
+                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Synced: $syncedExpCount Expenses, $syncedIncCount Income, \$${totalCashAdded.toStringAsFixed(2)} Cash")));
                  }, 
                  child: const Text("Sync to Pocket", style: TextStyle(color: Colors.white))
                )
@@ -147,8 +180,10 @@ class _HomeBodyState extends State<HomeBody>
       if (!mounted) return;
       Navigator.pop(context);
       
-      AddBody.ocrTextCache = jsonResult;
-      await Navigator.push(context, MaterialPageRoute(builder: (_) => const AddBody()));
+      await Navigator.push(
+        context, 
+        MaterialPageRoute(builder: (_) => ReceiptConfirmationPage(rawJson: jsonResult))
+      );
       loadDashboard();
     } catch (e) {
       if (!mounted) return;
@@ -164,6 +199,7 @@ class _HomeBodyState extends State<HomeBody>
     if (loading) {
       return const Center(child: CircularProgressIndicator());
     }
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SingleChildScrollView(
       child: Column(
@@ -295,6 +331,7 @@ class _HomeBodyState extends State<HomeBody>
               ),
             ),
           ),
+          _buildStreakBanner(),
           const SizedBox(height: 20),
           Row(
             children: [
@@ -317,8 +354,8 @@ class _HomeBodyState extends State<HomeBody>
               Expanded(
                 child: _button(
                   text: "Add Income",
-                  color: Colors.white,
-                  textColor: Colors.blue,
+                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                  textColor: isDark ? Colors.blue.shade300 : Colors.blue,
                   border: true,
                   onTap: () async {
                     await Navigator.push(
@@ -337,77 +374,67 @@ class _HomeBodyState extends State<HomeBody>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 "Active Goals",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
               ),
               Row(
                 children: [
                   GestureDetector(
-                    child: const Text("View All", style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 12)),
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GoalsPage())),
+                    child: Text(
+                      "Shared Vaults 👥",
+                      style: TextStyle(
+                        color: isDark ? Colors.green.shade300 : Colors.green,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SharedGoalsPage())).then((_) => loadDashboard()),
+                  ),
+                  const SizedBox(width: 15),
+                  GestureDetector(
+                    child: Text(
+                      "View All",
+                      style: TextStyle(
+                        color: isDark ? Colors.blue.shade300 : Colors.blue,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GoalsPage())).then((_) => loadDashboard()),
                   ),
                   const SizedBox(width: 15),
                   GestureDetector(
                     child: Container(
                       padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(color: Colors.blue.shade50, shape: BoxShape.circle),
-                      child: const Icon(Icons.add, color: Colors.blue, size: 16),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF1E293B) : Colors.blue.shade50,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.add, color: isDark ? Colors.blue.shade300 : Colors.blue, size: 16),
                     ),
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddGoalPage())),
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddGoalPage())).then((_) => loadDashboard()),
                   ),
                 ],
               )
             ],
           ),
           const SizedBox(height: 15),
-          GestureDetector(
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GoalsPage())),
-            child: Container(
-              padding: const EdgeInsets.all(15),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(15),
-                border: Border.all(color: Colors.grey.shade200),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(color: const Color(0xFFEBEFF7), borderRadius: BorderRadius.circular(10)),
-                    child: const Icon(Icons.flight_takeoff, color: Color(0xFF0055D4), size: 18),
-                  ),
-                  const SizedBox(width: 15),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text("Dream Vacation", style: TextStyle(fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 5),
-                        Stack(
-                          children: [
-                            Container(height: 4, decoration: BoxDecoration(color: const Color(0xFFEBEFF7), borderRadius: BorderRadius.circular(2))),
-                            FractionallySizedBox(
-                              widthFactor: 0.45,
-                              child: Container(height: 4, decoration: BoxDecoration(color: Colors.orange, borderRadius: BorderRadius.circular(2))),
-                            )
-                          ],
-                        )
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 15),
-                  const Text("45%", style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0055D4))),
-                ],
-              ),
-            ),
-          ),
+          _buildActiveGoalCard(),
           const SizedBox(height: 25),
-          const Align(
+          Align(
             alignment: Alignment.centerLeft,
             child: Text(
               "Income History",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
             ),
           ),
           const SizedBox(height: 10),
@@ -418,11 +445,15 @@ class _HomeBodyState extends State<HomeBody>
                       incomes.map((e) => _historyItem(e)).toList(),
                 ),
           const SizedBox(height: 25),
-          const Align(
+          Align(
             alignment: Alignment.centerLeft,
             child: Text(
               "Regular Expense History",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
             ),
           ),
           const SizedBox(height: 10),
@@ -444,6 +475,7 @@ class _HomeBodyState extends State<HomeBody>
     bool border = false,
     required VoidCallback onTap,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -451,7 +483,7 @@ class _HomeBodyState extends State<HomeBody>
         decoration: BoxDecoration(
           color: color,
           borderRadius: BorderRadius.circular(15),
-          border: border ? Border.all(color: Colors.grey.shade300) : null,
+          border: border ? Border.all(color: isDark ? const Color(0xFF334155) : Colors.grey.shade300) : null,
         ),
         child: Center(
           child: Text(
@@ -468,12 +500,13 @@ class _HomeBodyState extends State<HomeBody>
 
   Widget _historyItem(dynamic item) {
     final date = DateTime.tryParse(item['date'] ?? '');
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F2F6),
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F2F6),
         borderRadius: BorderRadius.circular(15),
       ),
       child: Row(
@@ -481,18 +514,24 @@ class _HomeBodyState extends State<HomeBody>
         children: [
           Row(
             children: [
-              const Icon(Icons.work, color: Colors.blue),
+              Icon(Icons.work, color: isDark ? Colors.blue.shade300 : Colors.blue),
               const SizedBox(width: 10),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(item['source'] ?? 'Income'),
+                  Text(
+                    item['source'] ?? 'Income',
+                    style: TextStyle(
+                      color: isDark ? Colors.white : Colors.black87,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   Text(
                     date != null
                         ? "${date.day}/${date.month}/${date.year}"
                         : "",
-                    style: const TextStyle(
-                      color: Colors.grey,
+                    style: TextStyle(
+                      color: isDark ? Colors.white60 : Colors.grey,
                       fontSize: 12,
                     ),
                   ),
@@ -502,8 +541,8 @@ class _HomeBodyState extends State<HomeBody>
           ),
           Text(
             "+\$${item['amount']}",
-            style: const TextStyle(
-              color: Colors.blue,
+            style: TextStyle(
+              color: isDark ? Colors.blue.shade300 : Colors.blue,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -514,12 +553,13 @@ class _HomeBodyState extends State<HomeBody>
 
   Widget _expenseItem(dynamic item) {
     final date = DateTime.tryParse(item['date'] ?? '');
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F2F6),
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F2F6),
         borderRadius: BorderRadius.circular(15),
       ),
       child: Row(
@@ -532,13 +572,19 @@ class _HomeBodyState extends State<HomeBody>
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(item['title'] ?? 'Expense'),
+                  Text(
+                    item['title'] ?? 'Expense',
+                    style: TextStyle(
+                      color: isDark ? Colors.white : Colors.black87,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   Text(
                     date != null
                         ? "${date.day}/${date.month}/${date.year}"
                         : "",
-                    style: const TextStyle(
-                      color: Colors.grey,
+                    style: TextStyle(
+                      color: isDark ? Colors.white60 : Colors.grey,
                       fontSize: 12,
                     ),
                   ),
@@ -554,6 +600,196 @@ class _HomeBodyState extends State<HomeBody>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildStreakBanner() {
+    if (streak <= 0) return const SizedBox.shrink();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const GamificationScreen()),
+        ).then((_) => loadDashboard());
+      },
+      child: Container(
+        margin: const EdgeInsets.only(top: 15, bottom: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: isDark
+                ? [const Color(0xFF2C1605), const Color(0xFF4C270A)]
+                : [const Color(0xFFFFF7ED), const Color(0xFFFFEDD5)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: isDark ? const Color(0xFF7C2D12) : Colors.orange.shade200, width: 1),
+        ),
+        child: Row(
+          children: [
+            const Text("🔥", style: TextStyle(fontSize: 24)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "You're on a $streak-Day Streak!",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.orange.shade300 : Colors.orange.shade900,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    "Tap to see your badges and daily budget check.",
+                    style: TextStyle(color: isDark ? Colors.white70 : Colors.black87, fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios, color: isDark ? Colors.orange.shade300 : Colors.orange, size: 14),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActiveGoalCard() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    if (latestGoal == null) {
+      return GestureDetector(
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddGoalPage())).then((_) => loadDashboard()),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: isDark ? const Color(0xFF334155) : Colors.grey.shade200),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: const [
+              Icon(Icons.flag_outlined, color: Colors.grey),
+              SizedBox(width: 10),
+              Text(
+                "Create a savings goal to start tracking",
+                style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final goal = latestGoal!;
+    final String title = goal['title'] ?? 'Goal';
+    final double target = (goal['targetAmount'] as num?)?.toDouble() ?? 0.0;
+    final double saved = (goal['savedAmount'] as num?)?.toDouble() ?? 0.0;
+    final double progress = target > 0 ? (saved / target).clamp(0.0, 1.0) : 0.0;
+    final bool isShared = goal['shared'] ?? false;
+
+    return GestureDetector(
+      onTap: () {
+        if (isShared) {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const SharedGoalsPage())).then((_) => loadDashboard());
+        } else {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const GoalsPage())).then((_) => loadDashboard());
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.all(15),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: isDark ? const Color(0xFF334155) : Colors.grey.shade200),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: isShared
+                    ? (isDark ? const Color(0xFF064E3B) : const Color(0xFFE8F5E9))
+                    : (isDark ? const Color(0xFF1E293B) : const Color(0xFFEBEFF7)),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                isShared ? Icons.group : Icons.flag,
+                color: isShared ? Colors.green : (isDark ? Colors.blue.shade300 : const Color(0xFF0055D4)),
+                size: 18,
+              ),
+            ),
+            const SizedBox(width: 15),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (isShared) ...[
+                        const SizedBox(width: 5),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            "Shared 👥",
+                            style: TextStyle(color: Colors.green, fontSize: 8, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 5),
+                  Stack(
+                    children: [
+                      Container(
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF334155) : const Color(0xFFEBEFF7),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      FractionallySizedBox(
+                        widthFactor: progress,
+                        child: Container(
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: isShared ? Colors.green : Colors.orange,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      )
+                    ],
+                  )
+                ],
+              ),
+            ),
+            const SizedBox(width: 15),
+            Text(
+              "${(progress * 100).toStringAsFixed(0)}%",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: isShared ? Colors.green : (isDark ? Colors.blue.shade300 : const Color(0xFF0055D4)),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

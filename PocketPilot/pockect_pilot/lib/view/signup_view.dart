@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:pockect_pilot/view/money_info_view.dart';
+import 'package:pockect_pilot/view/otp_verification_page.dart';
 
 import 'package:provider/provider.dart';
 
@@ -10,6 +10,7 @@ class SignUpView extends StatelessWidget {
   const SignUpView({super.key});
 
   Widget _input({
+    required BuildContext context,
     required String label,
     required String hint,
     required IconData icon,
@@ -19,27 +20,35 @@ class SignUpView extends StatelessWidget {
     bool toggle = false,
     VoidCallback? onToggle,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label.toUpperCase(),
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: isDark ? Colors.white70 : Colors.black87,
+          ),
         ),
         const SizedBox(height: 6),
         TextField(
           controller: controller,
           obscureText: obscure,
           onChanged: onChanged,
+          style: TextStyle(color: isDark ? Colors.white : Colors.black87),
           decoration: InputDecoration(
             hintText: hint,
+            hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.black38),
             filled: true,
-            fillColor: const Color(0xFFF1F2F6),
-            prefixIcon: Icon(icon),
+            fillColor: isDark ? const Color(0xFF334155) : const Color(0xFFF1F2F6),
+            prefixIcon: Icon(icon, color: isDark ? Colors.white70 : Colors.black54),
             suffixIcon: toggle
                 ? IconButton(
                     icon: Icon(
                       obscure ? Icons.visibility_off : Icons.visibility,
+                      color: isDark ? Colors.white70 : Colors.black54,
                     ),
                     onPressed: onToggle,
                   )
@@ -60,8 +69,9 @@ class SignUpView extends StatelessWidget {
       create: (_) => SignUpProvider(),
       child: Consumer<SignUpProvider>(
         builder: (context, p, _) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
           return Scaffold(
-            backgroundColor: const Color(0xFFF3F4F6),
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             body: SafeArea(
               child: SingleChildScrollView(
                 child: Padding(
@@ -99,19 +109,20 @@ class SignUpView extends StatelessWidget {
 
                       const SizedBox(height: 30),
 
-                      const Text(
+                      Text(
                         "Create your account",
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : Colors.black87,
                         ),
                       ),
 
                       const SizedBox(height: 10),
 
-                      const Text(
+                      Text(
                         "Your personal financial cockpit starts here.",
-                        style: TextStyle(color: Colors.grey),
+                        style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey),
                       ),
 
                       const SizedBox(height: 30),
@@ -120,12 +131,20 @@ class SignUpView extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Theme.of(context).cardColor,
                           borderRadius: BorderRadius.circular(25),
+                          boxShadow: [
+                            BoxShadow(
+                              color: isDark ? Colors.black.withOpacity(0.3) : Colors.black12,
+                              blurRadius: 15,
+                              offset: const Offset(0, 5),
+                            )
+                          ],
                         ),
                         child: Column(
                           children: [
                             _input(
+                              context: context,
                               label: "Name",
                               hint: "John Doe",
                               icon: Icons.person,
@@ -135,6 +154,7 @@ class SignUpView extends StatelessWidget {
                             const SizedBox(height: 12),
 
                             _input(
+                              context: context,
                               label: "Email",
                               hint: "pilot@example.com",
                               icon: Icons.email,
@@ -144,6 +164,7 @@ class SignUpView extends StatelessWidget {
                             const SizedBox(height: 12),
 
                             _input(
+                              context: context,
                               label: "Phone",
                               hint: "+1 (555)",
                               icon: Icons.phone,
@@ -153,6 +174,7 @@ class SignUpView extends StatelessWidget {
                             const SizedBox(height: 12),
 
                             _input(
+                              context: context,
                               label: "Password",
                               hint: "••••••",
                               icon: Icons.lock,
@@ -165,6 +187,7 @@ class SignUpView extends StatelessWidget {
                             const SizedBox(height: 12),
 
                             _input(
+                              context: context,
                               label: "Confirm",
                               hint: "••••••",
                               icon: Icons.verified_user,
@@ -193,7 +216,7 @@ class SignUpView extends StatelessWidget {
                                   Navigator.pushReplacement(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (_) => const MoneyInfoView(),
+                                      builder: (_) => const OTPVerificationPage(),
                                     ),
                                   );
                                 }
@@ -211,7 +234,7 @@ class SignUpView extends StatelessWidget {
                                 child: Center(
                                   child: Text(
                                     p.loading ? "Loading..." : "Sign Up →",
-                                    style: const TextStyle(color: Colors.white),
+                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                                   ),
                                 ),
                               ),

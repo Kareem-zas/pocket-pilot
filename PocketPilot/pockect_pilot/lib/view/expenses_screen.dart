@@ -53,18 +53,19 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: GlobalColors.mainColor2,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: GlobalColors.mainColor2,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         iconTheme: IconThemeData(
-          color: GlobalColors.textColor3,
+          color: isDark ? Colors.white : GlobalColors.textColor3,
         ),
         title: Text(
           'Expenses',
           style: TextStyle(
-            color: GlobalColors.textColor3,
+            color: isDark ? Colors.white : GlobalColors.textColor3,
             fontSize: 13,
             fontWeight: FontWeight.bold,
           ),
@@ -72,7 +73,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: loadExpenses,
-        color: GlobalColors.textColor3,
+        color: Theme.of(context).primaryColor,
         child: loading
             ? const Center(child: CircularProgressIndicator())
             : items.isEmpty
@@ -85,7 +86,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                         child: Text(
                           'No Expenses',
                           style: TextStyle(
-                            color: GlobalColors.textColor,
+                            color: isDark ? Colors.grey.shade400 : GlobalColors.textColor,
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                           ),
@@ -119,7 +120,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                           horizontal: 16,
                         ),
                         decoration: BoxDecoration(
-                          color: GlobalColors.textFieldColor,
+                          color: Theme.of(context).cardColor,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Row(
@@ -141,7 +142,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
                                       color:
-                                          GlobalColors.textColor3,
+                                          isDark ? Colors.white : GlobalColors.textColor3,
                                       fontSize: 11,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -151,7 +152,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                                     '$category • $date',
                                     style: TextStyle(
                                       color:
-                                          GlobalColors.textColor,
+                                          isDark ? Colors.grey.shade400 : GlobalColors.textColor,
                                       fontSize: 9,
                                     ),
                                   ),

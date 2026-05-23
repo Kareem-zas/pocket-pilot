@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:pockect_pilot/services/theme_service.dart';
 import 'package:pockect_pilot/view/login_view.dart';
 import 'package:pockect_pilot/services/token_service.dart';
 import 'package:pockect_pilot/services/userprofile_service.dart';
+import 'package:pockect_pilot/view/geo_reminders_settings_page.dart';
+import 'package:pockect_pilot/services/biometric_service.dart';
 
 class ProfileBody extends StatefulWidget {
   const ProfileBody({super.key});
@@ -11,7 +15,6 @@ class ProfileBody extends StatefulWidget {
 }
 
 class _ProfileBodyState extends State<ProfileBody> {
-  bool darkMode = false;
   bool notifications = true;
   bool biometric = false;
 
@@ -54,8 +57,10 @@ class _ProfileBodyState extends State<ProfileBody> {
         }
       }
 
+      final bioEnabled = await BiometricService.isBiometricsEnabled();
       setState(() {
         name = extractedName;
+        biometric = bioEnabled;
         loading = false;
       });
     } catch (e) {
@@ -94,11 +99,12 @@ class _ProfileBodyState extends State<ProfileBody> {
     String? subtitle,
     Widget? trailing,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F2F6),
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F2F6),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Row(
@@ -107,7 +113,7 @@ class _ProfileBodyState extends State<ProfileBody> {
             width: 45,
             height: 45,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: isDark ? const Color(0xFF334155) : Colors.white,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: Colors.blue),
@@ -118,8 +124,10 @@ class _ProfileBodyState extends State<ProfileBody> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(title,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 14)),
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: isDark ? Colors.white : Colors.black)),
                 if (subtitle != null)
                   Text(subtitle,
                       style: const TextStyle(
@@ -138,6 +146,7 @@ class _ProfileBodyState extends State<ProfileBody> {
     if (loading) {
       return const Center(child: CircularProgressIndicator());
     }
+    final themeService = Provider.of<ThemeService>(context);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -236,9 +245,9 @@ class _ProfileBodyState extends State<ProfileBody> {
             title: "Dark Mode",
             subtitle: "Switch between light and dark themes",
             trailing: Switch(
-              value: darkMode,
+              value: themeService.isDarkMode,
               onChanged: (val) {
-                setState(() => darkMode = val);
+                themeService.toggleTheme(val);
               },
             ),
           ),
@@ -261,9 +270,36 @@ class _ProfileBodyState extends State<ProfileBody> {
             subtitle: "Face ID or fingerprint unlock",
             trailing: Switch(
               value: biometric,
-              onChanged: (val) {
+              onChanged: (val) async {
+                if (val) {
+                  final capable = await BiometricService.isDeviceCapable();
+                  if (!capable) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Biometric login is not supported or configured on this device.")),
+                      );
+                    }
+                    return;
+                  }
+                }
+                await BiometricService.setBiometricsEnabled(val);
                 setState(() => biometric = val);
               },
+            ),
+          ),
+
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const GeoRemindersSettingsPage()),
+              );
+            },
+            child: _settingTile(
+              icon: Icons.location_on,
+              title: "Geo-Spatial Reminders",
+              subtitle: "Manage location alerts & dwell logs",
+              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
             ),
           ),
 
@@ -287,14 +323,18 @@ class _ProfileBodyState extends State<ProfileBody> {
               width: double.infinity,
               height: 55,
               decoration: BoxDecoration(
-                color: const Color(0xFFF8D7DA),
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF7F1D1D)
+                    : const Color(0xFFF8D7DA),
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: const Center(
+              child: Center(
                 child: Text(
                   "Logout",
                   style: TextStyle(
-                    color: Colors.red,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.red[200]
+                        : Colors.red,
                     fontWeight: FontWeight.bold,
                   ),
                 ),

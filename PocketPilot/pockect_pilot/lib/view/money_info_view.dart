@@ -77,15 +77,17 @@ class _MoneyInfoViewState extends State<MoneyInfoView> {
   }
 
   Widget _input(String label, Widget child) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label.toUpperCase(),
-          style: const TextStyle(
+          style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
-              letterSpacing: 1),
+              letterSpacing: 1,
+              color: isDark ? Colors.white70 : Colors.black87),
         ),
         const SizedBox(height: 6),
         child,
@@ -94,11 +96,12 @@ class _MoneyInfoViewState extends State<MoneyInfoView> {
   }
 
   Widget _box(Widget child) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 15),
       height: 55,
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F2F6),
+        color: isDark ? const Color(0xFF334155) : const Color(0xFFF1F2F6),
         borderRadius: BorderRadius.circular(15),
       ),
       child: child,
@@ -107,8 +110,9 @@ class _MoneyInfoViewState extends State<MoneyInfoView> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F4F6),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -119,30 +123,32 @@ class _MoneyInfoViewState extends State<MoneyInfoView> {
               // HEADER
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  Icon(Icons.menu, color: Colors.blue),
-                  Text("Pocket Pilot",
+                children: [
+                  const Icon(Icons.menu, color: Colors.blue),
+                  const Text("Pocket Pilot",
                       style: TextStyle(
                           color: Colors.blue,
                           fontWeight: FontWeight.bold,
                           fontSize: 18)),
-                  CircleAvatar(radius: 18)
+                  CircleAvatar(
+                    radius: 18,
+                    backgroundColor: isDark ? Colors.grey[700] : Colors.grey[300],
+                  )
                 ],
               ),
 
               const SizedBox(height: 30),
 
-              const Text(
+              Text(
                 "Welcome to POCKET PILOT",
-                style:
-                    TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87),
               ),
 
               const SizedBox(height: 6),
 
-              const Text(
+              Text(
                 "Let's get started by setting your primary income.",
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey),
               ),
 
               const SizedBox(height: 25),
@@ -151,8 +157,15 @@ class _MoneyInfoViewState extends State<MoneyInfoView> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(25),
+                  boxShadow: [
+                    BoxShadow(
+                      color: isDark ? Colors.black.withOpacity(0.3) : Colors.black12,
+                      blurRadius: 15,
+                      offset: const Offset(0, 5),
+                    )
+                  ],
                 ),
                 child: Column(
                   children: [
@@ -170,8 +183,10 @@ class _MoneyInfoViewState extends State<MoneyInfoView> {
                               child: TextField(
                                 controller: amountController,
                                 keyboardType: TextInputType.number,
-                                decoration: const InputDecoration(
+                                style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                                decoration: InputDecoration(
                                   hintText: "0.00",
+                                  hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.black38),
                                   border: InputBorder.none,
                                 ),
                                 onChanged: (_) => setState(() {}),
@@ -192,12 +207,13 @@ class _MoneyInfoViewState extends State<MoneyInfoView> {
                           value: sourceController.text.isEmpty
                               ? "Salary"
                               : sourceController.text,
+                          dropdownColor: Theme.of(context).cardColor,
                           underline: const SizedBox(),
                           isExpanded: true,
                           items: ["Salary", "Business", "Other"]
                               .map((e) => DropdownMenuItem(
                                     value: e,
-                                    child: Text(e),
+                                    child: Text(e, style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
                                   ))
                               .toList(),
                           onChanged: (val) {
@@ -227,8 +243,9 @@ class _MoneyInfoViewState extends State<MoneyInfoView> {
                                     : selectedDate!
                                         .toString()
                                         .split(" ")[0],
+                                style: TextStyle(color: isDark ? Colors.white70 : Colors.black87),
                               ),
-                              const Icon(Icons.calendar_today),
+                              Icon(Icons.calendar_today, color: isDark ? Colors.white70 : Colors.black54),
                             ],
                           ),
                         ),
@@ -241,7 +258,7 @@ class _MoneyInfoViewState extends State<MoneyInfoView> {
                     Container(
                       padding: const EdgeInsets.all(15),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF1F2F6),
+                        color: isDark ? const Color(0xFF334155) : const Color(0xFFF1F2F6),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Column(
@@ -251,8 +268,8 @@ class _MoneyInfoViewState extends State<MoneyInfoView> {
                               const Icon(Icons.autorenew,
                                   color: Colors.orange),
                               const SizedBox(width: 10),
-                              const Expanded(
-                                child: Text("Is Recurring Income?"),
+                              Expanded(
+                                child: Text("Is Recurring Income?", style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
                               ),
                               Switch(
                                 value: isRecurring,
@@ -280,12 +297,12 @@ class _MoneyInfoViewState extends State<MoneyInfoView> {
                                       border: Border.all(
                                           color: frequency == "monthly"
                                               ? Colors.blue
-                                              : Colors.grey),
+                                              : (isDark ? Colors.grey[700]! : Colors.grey)),
                                       borderRadius:
                                           BorderRadius.circular(15),
                                     ),
-                                    child: const Center(
-                                        child: Text("MONTHLY")),
+                                    child: Center(
+                                        child: Text("MONTHLY", style: TextStyle(color: frequency == "monthly" ? Colors.blue : (isDark ? Colors.white70 : Colors.black87)))),
                                   ),
                                 ),
                               ),
@@ -300,12 +317,12 @@ class _MoneyInfoViewState extends State<MoneyInfoView> {
                                       border: Border.all(
                                           color: frequency == "yearly"
                                               ? Colors.blue
-                                              : Colors.grey),
+                                              : (isDark ? Colors.grey[700]! : Colors.grey)),
                                       borderRadius:
                                           BorderRadius.circular(15),
                                     ),
-                                    child: const Center(
-                                        child: Text("YEARLY")),
+                                    child: Center(
+                                        child: Text("YEARLY", style: TextStyle(color: frequency == "yearly" ? Colors.blue : (isDark ? Colors.white70 : Colors.black87)))),
                                   ),
                                 ),
                               ),
@@ -323,15 +340,17 @@ class _MoneyInfoViewState extends State<MoneyInfoView> {
                       Container(
                         padding: const EdgeInsets.all(15),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF1F2F6),
+                          color: isDark ? const Color(0xFF334155) : const Color(0xFFF1F2F6),
                           borderRadius: BorderRadius.circular(15),
                         ),
                         child: TextField(
                           controller: notesController,
                           maxLines: 3,
-                          decoration: const InputDecoration(
+                          style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                          decoration: InputDecoration(
                             hintText:
                                 "e.g. Main job salary after tax...",
+                            hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.black38),
                             border: InputBorder.none,
                           ),
                         ),
@@ -348,10 +367,11 @@ class _MoneyInfoViewState extends State<MoneyInfoView> {
                         onPressed: _saveIncome,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.blue,
+                          foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(15)),
                         ),
-                        child: const Text("Complete Setup"),
+                        child: const Text("Complete Setup", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                       ),
                     ),
                   ],

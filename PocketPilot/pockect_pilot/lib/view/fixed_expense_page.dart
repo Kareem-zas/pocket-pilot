@@ -170,9 +170,10 @@ class _FixedExpensePageState extends State<FixedExpensePage> {
     }
 
     int activeCount = activeItems.where((i) => i['isActive'] == true).length;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           controller: _scrollController,
@@ -184,17 +185,17 @@ class _FixedExpensePageState extends State<FixedExpensePage> {
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: const [
-                    Icon(Icons.menu, color: Colors.blue),
+                  children: [
+                    Icon(Icons.menu, color: Theme.of(context).primaryColor),
                     Text(
                       "Pocket Pilot",
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Colors.blue,
+                        color: Theme.of(context).primaryColor,
                       ),
                     ),
-                    CircleAvatar(radius: 18),
+                    const CircleAvatar(radius: 18),
                   ],
                 ),
               ),
@@ -217,17 +218,17 @@ class _FixedExpensePageState extends State<FixedExpensePage> {
                     const SizedBox(height: 5),
                     Text(
                       "\$${monthlyTotal.toStringAsFixed(2)}",
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.w800,
-                        color: Color(0xFF1B2128),
+                        color: isDark ? Colors.white : const Color(0xFF1B2128),
                       ),
                     ),
                     const SizedBox(height: 10),
                     Text(
                       "Your recurring flight path. We've identified $activeCount active subscriptions currently fueling your ecosystem.",
                       style: TextStyle(
-                        color: Colors.grey.shade600,
+                        color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
                         height: 1.4,
                       ),
                     ),
@@ -238,7 +239,7 @@ class _FixedExpensePageState extends State<FixedExpensePage> {
                       width: 200,
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF246AF3),
+                          backgroundColor: Theme.of(context).primaryColor,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -259,9 +260,13 @@ class _FixedExpensePageState extends State<FixedExpensePage> {
                     ),
 
                     const SizedBox(height: 30),
-                    const Text(
+                    Text(
                       "Active Subscriptions",
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : const Color(0xFF333333),
+                      ),
                     ),
                     const SizedBox(height: 15),
                     
@@ -290,25 +295,31 @@ class _FixedExpensePageState extends State<FixedExpensePage> {
                         margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(15),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Theme.of(context).cardColor,
                           borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.02),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            )
-                          ]
+                          boxShadow: isDark
+                              ? []
+                              : [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.02),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  )
+                                ],
                         ),
                         child: Row(
                           children: [
                             Container(
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
-                                color: iconBg,
+                                color: isDark ? const Color(0xFF334155) : iconBg,
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              child: Icon(iconData, color: iconColor, size: 22),
+                              child: Icon(
+                                iconData,
+                                color: isDark ? Colors.blue.shade300 : iconColor,
+                                size: 22,
+                              ),
                             ),
                             const SizedBox(width: 15),
                             Expanded(
@@ -317,26 +328,39 @@ class _FixedExpensePageState extends State<FixedExpensePage> {
                                 children: [
                                   Text(
                                     item['title'] ?? 'Subscription',
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      color: isDark ? Colors.white : Colors.black,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
                                     "${(item['frequency'] ?? 'MONTHLY').toString().toUpperCase()} - NEXT: TBD",
-                                    style: TextStyle(fontSize: 10, color: Colors.grey.shade600, letterSpacing: 0.5),
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                                      letterSpacing: 0.5,
+                                    ),
                                   ),
                                 ],
                               ),
                             ),
                             Text(
                               "\$${double.tryParse(item['amount'].toString())?.toStringAsFixed(2) ?? '0.00'}",
-                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                                color: isDark ? Colors.white : Colors.black,
+                              ),
                             ),
                             const SizedBox(width: 8),
                             Switch(
                               value: isActive,
                               activeThumbColor: Colors.white,
-                              activeTrackColor: const Color(0xFF1E5BD8),
+                              activeTrackColor: Theme.of(context).primaryColor,
                               onChanged: (val) => _toggleSubscription(i, val),
                             )
                           ],
@@ -354,30 +378,49 @@ class _FixedExpensePageState extends State<FixedExpensePage> {
                 margin: const EdgeInsets.symmetric(horizontal: 20),
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEEF0F5),
+                  color: isDark ? Theme.of(context).cardColor : const Color(0xFFEEF0F5),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      children: const [
-                        Icon(Icons.bar_chart, color: Color(0xFF9E6515)),
-                        SizedBox(width: 10),
-                        Text("Quick Navigator", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      children: [
+                        Icon(
+                          Icons.bar_chart,
+                          color: isDark ? Colors.orange.shade300 : const Color(0xFF9E6515),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          "Quick Navigator",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: isDark ? Colors.white : Colors.black,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 20),
                     
-                    const Text("EXPENSE NAME", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black54)),
+                    Text(
+                      "EXPENSE NAME",
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.grey.shade400 : Colors.black54,
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     TextField(
                       controller: nameController,
                       focusNode: nameFocusNode,
+                      style: TextStyle(color: isDark ? Colors.white : Colors.black),
                       decoration: InputDecoration(
                         hintText: "e.g. Spotify Family",
+                        hintStyle: TextStyle(color: isDark ? Colors.white30 : Colors.black45),
                         filled: true,
-                        fillColor: Colors.white,
+                        fillColor: isDark ? Theme.of(context).scaffoldBackgroundColor : Colors.white,
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
                       ),
@@ -390,15 +433,24 @@ class _FixedExpensePageState extends State<FixedExpensePage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text("AMOUNT", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black54)),
+                              Text(
+                                "AMOUNT",
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.grey.shade400 : Colors.black54,
+                                ),
+                              ),
                               const SizedBox(height: 8),
                               TextField(
                                 controller: amountController,
                                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                style: TextStyle(color: isDark ? Colors.white : Colors.black),
                                 decoration: InputDecoration(
                                   hintText: "0.00",
+                                  hintStyle: TextStyle(color: isDark ? Colors.white30 : Colors.black45),
                                   filled: true,
-                                  fillColor: Colors.white,
+                                  fillColor: isDark ? Theme.of(context).scaffoldBackgroundColor : Colors.white,
                                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                                   contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
                                 ),
@@ -411,17 +463,26 @@ class _FixedExpensePageState extends State<FixedExpensePage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text("FREQUENCY", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black54)),
+                              Text(
+                                "FREQUENCY",
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.grey.shade400 : Colors.black54,
+                                ),
+                              ),
                               const SizedBox(height: 8),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 15),
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
+                                  color: isDark ? Theme.of(context).scaffoldBackgroundColor : Colors.white,
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: DropdownButtonHideUnderline(
                                   child: DropdownButton<String>(
                                     value: selectedFrequency,
+                                    dropdownColor: isDark ? Theme.of(context).scaffoldBackgroundColor : Colors.white,
+                                    style: TextStyle(color: isDark ? Colors.white : Colors.black),
                                     isExpanded: true,
                                     items: frequencies.map((f) => DropdownMenuItem(value: f, child: Text(f))).toList(),
                                     onChanged: (val) {
@@ -437,14 +498,21 @@ class _FixedExpensePageState extends State<FixedExpensePage> {
                     ),
                     
                     const SizedBox(height: 15),
-                    const Text("NEXT DUE DATE", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black54)),
+                    Text(
+                      "NEXT DUE DATE",
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.grey.shade400 : Colors.black54,
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     GestureDetector(
                       onTap: _pickDate,
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: isDark ? Theme.of(context).scaffoldBackgroundColor : Colors.white,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
@@ -453,9 +521,9 @@ class _FixedExpensePageState extends State<FixedExpensePage> {
                             Text(selectedDate != null 
                               ? "${selectedDate!.month.toString().padLeft(2,'0')}/${selectedDate!.day.toString().padLeft(2,'0')}/${selectedDate!.year}" 
                               : "mm/dd/yyyy", 
-                              style: TextStyle(color: selectedDate != null ? Colors.black : Colors.black45)
+                              style: TextStyle(color: selectedDate != null ? (isDark ? Colors.white : Colors.black) : (isDark ? Colors.white30 : Colors.black45))
                             ),
-                            const Icon(Icons.calendar_today, size: 18, color: Colors.black54),
+                            Icon(Icons.calendar_today, size: 18, color: isDark ? Colors.white70 : Colors.black54),
                           ],
                         ),
                       ),

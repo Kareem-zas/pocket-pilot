@@ -119,13 +119,13 @@ class _AiPilotPageState extends State<AiPilotPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(15),
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).cardColor,
               borderRadius: BorderRadius.circular(30),
             ),
             child: Column(
@@ -160,12 +160,13 @@ class _AiPilotPageState extends State<AiPilotPage> {
   }
 
   Widget _buildHeader() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back_ios, color: Colors.black87, size: 20),
+            icon: Icon(Icons.arrow_back_ios, color: isDark ? Colors.white70 : Colors.black87, size: 20),
             onPressed: () => Navigator.pop(context),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
@@ -183,7 +184,7 @@ class _AiPilotPageState extends State<AiPilotPage> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text("AI Pilot", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              Text("AI Pilot", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black)),
               Row(
                 children: [
                   Container(
@@ -204,6 +205,7 @@ class _AiPilotPageState extends State<AiPilotPage> {
   }
 
   Widget _buildModelBubble(String text, String time) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
       child: Row(
@@ -212,10 +214,10 @@ class _AiPilotPageState extends State<AiPilotPage> {
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: Colors.orange.shade200,
+              color: isDark ? Colors.orange.shade800.withValues(alpha: 0.3) : Colors.orange.shade200,
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.smart_toy, color: Colors.orange.shade800, size: 16),
+            child: Icon(Icons.smart_toy, color: isDark ? Colors.orange.shade300 : Colors.orange.shade800, size: 16),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -225,10 +227,10 @@ class _AiPilotPageState extends State<AiPilotPage> {
                 Container(
                   padding: const EdgeInsets.all(15),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF1F2F6),
+                    color: isDark ? const Color(0xFF334155) : const Color(0xFFF1F2F6),
                     borderRadius: BorderRadius.circular(15),
                   ),
-                  child: Text(text, style: const TextStyle(height: 1.5, color: Colors.black87)),
+                  child: Text(text, style: TextStyle(height: 1.5, color: isDark ? Colors.white70 : Colors.black87)),
                 ),
                 const SizedBox(height: 5),
                 Text(time, style: const TextStyle(fontSize: 10, color: Colors.grey)),
@@ -277,6 +279,7 @@ class _AiPilotPageState extends State<AiPilotPage> {
   }
 
   Widget _buildTypingIndicator() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
       child: Row(
@@ -285,17 +288,17 @@ class _AiPilotPageState extends State<AiPilotPage> {
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: Colors.orange.shade200,
+              color: isDark ? Colors.orange.shade800.withValues(alpha: 0.3) : Colors.orange.shade200,
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.smart_toy, color: Colors.orange.shade800, size: 16),
+            child: Icon(Icons.smart_toy, color: isDark ? Colors.orange.shade300 : Colors.orange.shade800, size: 16),
           ),
           const SizedBox(width: 10),
           Container(
             width: 60,
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 15),
             decoration: BoxDecoration(
-              color: const Color(0xFFF1F2F6),
+              color: isDark ? const Color(0xFF334155) : const Color(0xFFF1F2F6),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Row(
@@ -327,21 +330,23 @@ class _AiPilotPageState extends State<AiPilotPage> {
   }
 
   Widget _chip(String label) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return ActionChip(
-      label: Text(label, style: const TextStyle(color: Colors.blue)),
-      backgroundColor: Colors.blue.shade50,
-      side: BorderSide(color: Colors.blue.shade100),
+      label: Text(label, style: TextStyle(color: isDark ? Colors.blue[300] : Colors.blue)),
+      backgroundColor: isDark ? Colors.blue.withValues(alpha: 0.15) : Colors.blue.shade50,
+      side: BorderSide(color: isDark ? Colors.blue.withValues(alpha: 0.3) : Colors.blue.shade100),
       onPressed: () => _sendMessage(label),
     );
   }
 
   Widget _buildInputRow() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          color: const Color(0xFFF1F2F6),
+          color: isDark ? const Color(0xFF334155) : const Color(0xFFF1F2F6),
           borderRadius: BorderRadius.circular(30),
         ),
         child: Row(
@@ -349,17 +354,17 @@ class _AiPilotPageState extends State<AiPilotPage> {
             Expanded(
               child: TextField(
                 controller: _controller,
-                style: const TextStyle(fontSize: 14),
+                style: TextStyle(fontSize: 14, color: isDark ? Colors.white : Colors.black87),
                 decoration: InputDecoration(
                   hintText: "Ask your Pocket Pilot...",
-                  hintStyle: TextStyle(color: Colors.grey.shade400),
+                  hintStyle: TextStyle(color: isDark ? Colors.grey.shade500 : Colors.grey.shade400),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 10),
                 ),
                 onSubmitted: _sendMessage,
               ),
             ),
-            Icon(Icons.mic, color: Colors.grey.shade600),
+            Icon(Icons.mic, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
             const SizedBox(width: 10),
             GestureDetector(
               onTap: () => _sendMessage(_controller.text),
