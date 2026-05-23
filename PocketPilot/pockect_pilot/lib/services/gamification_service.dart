@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'token_service.dart';
 
 class GamificationService {
-  static const String baseUrl = 'http://localhost:8000/api/gamification';
+  static const String baseUrl = 'http://192.168.0.109:8000/api/gamification';
 
   static Future<Map<String, String>> _headers() async {
     final token = await TokenService.getToken();

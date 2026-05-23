@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'token_service.dart';
 
 class HomeService {
-  static const String baseUrl = 'http://localhost:8000/api/dashboard';
+  static const String baseUrl = 'http://192.168.0.109:8000/api/dashboard';
 
   static Future<Map<String, double>> fetchDashboard() async {
     final token = await TokenService.getToken();

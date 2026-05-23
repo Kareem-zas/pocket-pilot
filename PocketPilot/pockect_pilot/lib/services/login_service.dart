@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'token_service.dart';
 
 class LoginService {
-  static const String baseUrl = 'http://localhost:8000/api/auth';
+  static const String baseUrl = 'http://192.168.0.109:8000/api/auth';
 
   static Future<Map<String, dynamic>> login({
     required String email,

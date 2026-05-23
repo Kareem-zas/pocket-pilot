@@ -3,7 +3,7 @@
 // import 'token_service.dart';
 
 // class SummaryService {
-//   static const String _baseUrl = 'http://localhost:8000/api/summary';
+//   static const String _baseUrl = 'http://192.168.0.109:8000/api/summary';
 
 //   static Future<Map<String, double>> getDashboardSummary() async {
 //     final token = await TokenService.getToken();

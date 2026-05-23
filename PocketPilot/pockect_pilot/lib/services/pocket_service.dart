@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'token_service.dart';
 
 class PocketService {
-  static const String baseUrl = 'http://localhost:8000/api/pocket';
+  static const String baseUrl = 'http://192.168.0.109:8000/api/pocket';
 
   /// Fetch the current pocket cash balance from the backend
   static Future<double> getPocketBalance() async {

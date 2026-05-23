@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'token_service.dart';
 
 class FixedExpensesService {
-  static const String baseUrl = 'http://localhost:8000/api/fixed-expenses';
+  static const String baseUrl = 'http://192.168.0.109:8000/api/fixed-expenses';
 
   static Future<void> addFixedExpenseItem({
     required String title,

@@ -4,7 +4,7 @@ import 'token_service.dart';
 
 class VariableExpensesService {
   static const String baseUrl =
-      'http://localhost:8000/api/variable-expenses';
+      'http://192.168.0.109:8000/api/variable-expenses';
 
   // ✅ ADD EXPENSE (هذا اللي كان ناقص)
   static Future<void> addExpense({
@@ -48,7 +48,7 @@ class VariableExpensesService {
     if (year != null) query['year'] = year.toString();
     if (month != null) query['month'] = month.toString();
 
-    final uri = Uri.parse('http://localhost:8000/api/dashboard')
+    final uri = Uri.parse('http://192.168.0.109:8000/api/dashboard')
         .replace(queryParameters: query);
 
     final response = await http.get(
