@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pockect_pilot/services/home_service.dart';
 import 'package:pockect_pilot/services/income_service.dart';
 import 'dart:io';
@@ -120,46 +121,89 @@ class _HomeBodyState extends State<HomeBody>
   Future<void> _syncSMS() async {
     try {
       final msgs = await BankSmsService.fetchRecentBankMessages();
-      if (msgs.isNotEmpty && mounted) {
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            backgroundColor: Colors.white,
-            title: const Text("Bank Messages Found"),
-            content: Text("Detected ${msgs.length} recent transactions. Process any ATM withdrawals into your Pocket Money?"),
-            actions: [
-               TextButton(onPressed:() => Navigator.pop(ctx), child: const Text("Cancel")),
-               ElevatedButton(
-                 style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
-                 onPressed: () async {
-                   double totalCashAdded = 0;
-                   for(var msg in msgs) {
-                      if(msg['type'] == 'withdrawal') {
-                          totalCashAdded += msg['amount'];
-                      }
-                   }
-                   
-                   // Sync to backend APIs (they filter internally by type: purchase and deposit)
-                   int syncedExpCount = await VariableExpensesService.syncSmsExpenses(msgs);
-                   int syncedIncCount = await IncomeService.syncSmsIncome(msgs);
-                   
-                   await PocketService.addPocketCash(totalCashAdded);
-                    if (!ctx.mounted) return;
-                    Navigator.pop(ctx);
-                    if (!mounted) return;
-                   loadDashboard();
-                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Synced: $syncedExpCount Expenses, $syncedIncCount Income, \$${totalCashAdded.toStringAsFixed(2)} Cash")));
-                 }, 
-                 child: const Text("Sync to Pocket", style: TextStyle(color: Colors.white))
-               )
-            ]
+      if (msgs.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("No new bank messages.")));
+        }
+        return;
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+      final List<String> processedIds = prefs.getStringList('processed_withdrawal_sms_ids') ?? [];
+      
+      double totalCashAdded = 0;
+      List<String> newProcessedIds = [];
+      int newWithdrawalsCount = 0;
+
+      for (var msg in msgs) {
+        if (msg['type'] == 'withdrawal') {
+          String msgId = msg['id'].toString();
+          if (!processedIds.contains(msgId)) {
+            totalCashAdded += msg['amount'];
+            newProcessedIds.add(msgId);
+            newWithdrawalsCount++;
+          }
+        }
+      }
+
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: Colors.white,
+          title: const Text("Bank Messages Found"),
+          content: Text(
+            "Detected ${msgs.length} transactions.\n"
+            "- New ATM withdrawals: $newWithdrawalsCount (Cash to add: \$${totalCashAdded.toStringAsFixed(2)})\n"
+            "Would you like to sync them?"
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx), 
+              child: const Text("Cancel")
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1D9E75)),
+              onPressed: () async {
+                // Sync to backend APIs (they filter internally by type: purchase and deposit)
+                int syncedExpCount = await VariableExpensesService.syncSmsExpenses(msgs);
+                int syncedIncCount = await IncomeService.syncSmsIncome(msgs);
+                
+                if (totalCashAdded > 0) {
+                  await PocketService.addPocketCash(totalCashAdded);
+                  processedIds.addAll(newProcessedIds);
+                  await prefs.setStringList('processed_withdrawal_sms_ids', processedIds);
+                }
+                
+                if (!ctx.mounted) return;
+                Navigator.pop(ctx);
+                if (!mounted) return;
+                loadDashboard();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      "Synced: $syncedExpCount Expenses, $syncedIncCount Income, "
+                      "\$${totalCashAdded.toStringAsFixed(2)} Cash"
+                    ),
+                    backgroundColor: const Color(0xFF1D9E75),
+                  )
+                );
+              }, 
+              child: const Text("Sync to Pocket", style: TextStyle(color: Colors.white))
+            )
+          ]
+        )
+      );
+    } catch(e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceFirst("Exception: ", "")),
+            backgroundColor: Colors.redAccent,
           )
         );
-      } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("No new bank messages.")));
       }
-    } catch(e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
 
